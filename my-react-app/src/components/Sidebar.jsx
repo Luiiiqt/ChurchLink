@@ -54,7 +54,7 @@ function Sidebar({ status, currentPage, setCurrentPage, onLogout }) {
             U
           </div>
           <div>
-            <p className="text-sm font-semibold text-green-200">User Name</p>
+            <p className="text-sm font-semibold text-green-200">Mitsu</p>
             <p className="text-xs text-green-400">Admin</p>
           </div>
         </div>

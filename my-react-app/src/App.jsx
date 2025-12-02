@@ -6,19 +6,22 @@ import Register from "./components/auth/Register";
 import Dashboard from "./components/pages/Dashboard";
 import Home from "./components/pages/Home";
 import UserManagement from "./components/pages/UserManagement";
+import LoadingScreen from "./LoadingScreen";
 
 export default function App() {
   const [sidebarToggle, setSidebarToggle] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
-  const [currentPage, setCurrentPage] = useState("dashboard"); 
-  const [users, setUsers] = useState([]); // in-memory users
+  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [users, setUsers] = useState([]);
+
+  const [loading, setLoading] = useState(false); // NEW
 
   function toggleSidebar() {
     setSidebarToggle(!sidebarToggle);
   }
 
-  // login
+  // LOGIN
   function handleLogin(username, password) {
     const user = users.find(
       (u) => u.username === username && u.password === password
@@ -29,10 +32,15 @@ export default function App() {
       return;
     }
 
-    setIsLoggedIn(true);
+    // Show loading screen for 1.5 seconds
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setIsLoggedIn(true);
+    }, 1500);
   }
 
-  // register
+  // REGISTER
   function handleRegister(username, password) {
     const exists = users.some((u) => u.username === username);
 
@@ -48,13 +56,17 @@ export default function App() {
     return true;
   }
 
-  // logout
   function handleLogout() {
     setIsLoggedIn(false);
     setCurrentPage("dashboard");
   }
 
-  // Not logged in -> show login/register
+  // If loading → show loading screen
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // If NOT logged in → show login or register
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-100">
@@ -73,7 +85,7 @@ export default function App() {
     );
   }
 
-  // Logged in -> main layout
+  // Logged in → load dashboard
   let pageContent;
   switch (currentPage) {
     case "dashboard":
@@ -95,7 +107,7 @@ export default function App() {
         status={sidebarToggle}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        onLogout={handleLogout} // pass logout to sidebar
+        onLogout={handleLogout}
       />
 
       <div className="flex flex-col flex-1">
