@@ -10,7 +10,7 @@ function Header({ onSidebarToggle }) {
       </button>
 
       <div className="flex items-center space-x-4 relative">
-        <span className="font-semibold text-emerald-800 text-lg select-none">ChurchLink Admin</span>
+        <span className="font-semibold text-emerald-800 text-lg select-none">Admin</span>
 
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-xl select-none shadow-md relative">
           U
