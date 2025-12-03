@@ -12,52 +12,27 @@ public class Ministry {
 
     private String ministry;
 
-    // Many Ministries → One User
+    // Leader/admin of this ministry
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "leader_id")
+    private User leader;
 
-    // One Ministry → Many Members
+    // One ministry has many members
     @OneToMany(mappedBy = "ministry")
     private List<Member> members;
 
-    // One Ministry → Many Activities
+    // One ministry has many activities
     @OneToMany(mappedBy = "ministry")
     private List<Activity> activities;
 
-    public int getMinistryId() {
-        return ministryId;
-    }
-
-    public String getMinistry() {
-        return ministry;
-    }
-
-    public void setMinistry(String ministry) {
-        this.ministry = ministry;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public List<Member> getMembers() {
-        return members;
-    }
-
-    public void setMembers(List<Member> members) {
-        this.members = members;
-    }
-
-    public List<Activity> getActivities() {
-        return activities;
-    }
-
-    public void setActivities(List<Activity> activities) {
-        this.activities = activities;
-    }
+    // Getters and Setters
+    public int getMinistryId() { return ministryId; }
+    public String getMinistry() { return ministry; }
+    public void setMinistry(String ministry) { this.ministry = ministry; }
+    public User getLeader() { return leader; }
+    public void setLeader(User leader) { this.leader = leader; }
+    public List<Member> getMembers() { return members; }
+    public void setMembers(List<Member> members) { this.members = members; }
+    public List<Activity> getActivities() { return activities; }
+    public void setActivities(List<Activity> activities) { this.activities = activities; }
 }

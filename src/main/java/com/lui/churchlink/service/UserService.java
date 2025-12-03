@@ -16,19 +16,21 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Register a new user with full personal info
-    public void registerUser(UserRegistrationRequest request) {
-        if (userRepository.existsByUsername(request.username())) {
+    // Updated to accept full info
+    public void registerUser(String firstName, String middleName, String lastName,
+                             String username, String password, String email) {
+
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already taken");
         }
 
         User user = new User();
-        user.setFirstName(request.first Name());
-        user.setMiddleName(request.middleName());
-        user.setLastName(request.lastName());
-        user.setUsername(request.username());
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user.setEmail(request.email());
+        user.setFirstName(firstName);
+        user.setMiddleName(middleName); // can be null
+        user.setLastName(lastName);
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setEmail(email);
 
         userRepository.save(user);
     }

@@ -1,6 +1,7 @@
 package com.lui.churchlink.service;
 
 import com.lui.churchlink.model.User;
+import com.lui.churchlink.repository.UserRepository;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
-                Collections.emptyList() // You can later add roles/authorities here
+                Collections.emptyList()
         );
     }
 }

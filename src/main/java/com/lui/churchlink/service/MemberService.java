@@ -1,7 +1,6 @@
 package com.lui.churchlink.service;
 
 import com.lui.churchlink.dto.MemberDTO;
-import com.lui.churchlink.exception.ResourceNotFoundException;
 import com.lui.churchlink.model.Member;
 import com.lui.churchlink.model.Ministry;
 import com.lui.churchlink.repository.MemberRepository;
@@ -21,55 +20,51 @@ public class MemberService {
         this.ministryRepository = ministryRepository;
     }
 
-    // Get all members
     public List<Member> findAll() {
         return memberRepository.findAll();
     }
 
-    // Find member by ID
     public Member findById(int id) {
         return memberRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Member not found"));
     }
 
-    // Save new member
-    public Member save(MemberDTO memberDTO) {
+    public Member save(MemberDTO dto) {
         Member member = new Member();
-        member.setFirstName(memberDTO.getFirstName());
-        member.setMiddleName(memberDTO.getMiddleName());
-        member.setLastName(memberDTO.getLastName());
-        member.setDob(memberDTO.getDob());
-        member.setGender(memberDTO.getGender());
-        member.setAddress(memberDTO.getAddress());
+        member.setFirstName(dto.getFirstName());
+        member.setMiddleName(dto.getMiddleName());
+        member.setLastName(dto.getLastName());
+        member.setDob(dto.getDob());
+        member.setGender(dto.getGender());
+        member.setAddress(dto.getAddress());
 
-        Ministry ministry = ministryRepository.findById(memberDTO.getMinistryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ministry not found with id: " + memberDTO.getMinistryId()));
+        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                .orElseThrow(() -> new RuntimeException("Ministry not found"));
         member.setMinistry(ministry);
 
         return memberRepository.save(member);
     }
 
-    // Update existing member
-    public Member updateMember(Member member, MemberDTO memberDTO) {
-        member.setFirstName(memberDTO.getFirstName());
-        member.setMiddleName(memberDTO.getMiddleName());
-        member.setLastName(memberDTO.getLastName());
-        member.setDob(memberDTO.getDob());
-        member.setGender(memberDTO.getGender());
-        member.setAddress(memberDTO.getAddress());
+    // ✅ Updated to accept ID + DTO
+    public Member update(int id, MemberDTO dto) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        Ministry ministry = ministryRepository.findById(memberDTO.getMinistryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ministry not found with id: " + memberDTO.getMinistryId()));
+        member.setFirstName(dto.getFirstName());
+        member.setMiddleName(dto.getMiddleName());
+        member.setLastName(dto.getLastName());
+        member.setDob(dto.getDob());
+        member.setGender(dto.getGender());
+        member.setAddress(dto.getAddress());
+
+        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                .orElseThrow(() -> new RuntimeException("Ministry not found"));
         member.setMinistry(ministry);
 
         return memberRepository.save(member);
     }
 
-    // Delete member by ID
-    public void deleteMember(int id) {
-        if (!memberRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Member not found with id: " + id);
-        }
+    public void delete(int id) {
         memberRepository.deleteById(id);
     }
 }

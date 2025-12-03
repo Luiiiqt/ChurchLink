@@ -21,19 +21,17 @@ public class JwtTokenService {
         this.decoder = decoder;
     }
 
-    // Generate JWT token
     public String generateToken(Authentication authentication) {
         Instant now = Instant.now();
 
-        // Collect authorities/roles as a space-separated string
         String scope = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(" "));
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("churchlink")          // optional: specify issuer
+                .issuer("churchlink")
                 .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS)) // token valid for 1 hour
+                .expiresAt(now.plus(1, ChronoUnit.HOURS))
                 .subject(authentication.getName())
                 .claim("scope", scope)
                 .build();
@@ -46,14 +44,12 @@ public class JwtTokenService {
         return this.encoder.encode(encoderParameters).getTokenValue();
     }
 
-    // Extract expiration timestamp from JWT
     public Long extractExpirationTime(String token) {
         Jwt jwt = decoder.decode(token);
         Instant exp = jwt.getExpiresAt();
         return exp != null ? exp.toEpochMilli() : null;
     }
 
-    // Extract username from JWT
     public String extractUsername(String token) {
         Jwt jwt = decoder.decode(token);
         return jwt.getSubject();
