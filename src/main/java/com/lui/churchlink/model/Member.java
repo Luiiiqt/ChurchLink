@@ -19,7 +19,7 @@ public class Member {
     private String address;
 
     @ManyToOne
-    @JoinColumn(name = "ministry_id")
+    @JoinColumn(name = "ministry_id", nullable = false)
     private Ministry ministry;
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
