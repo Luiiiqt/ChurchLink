@@ -1,25 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-
-// Make sure your API_URL does NOT include `/api`
-// It should just be: http://localhost:8000
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { API_URL } from "../config/constants";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem("token") || null);
-  const [user, setUser] = useState(() => {
-    const u = localStorage.getItem("user");
-    return u ? JSON.parse(u) : null;
-  });
+  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
 
-  // Sync token to localStorage
   useEffect(() => {
     if (token) localStorage.setItem("token", token);
     else localStorage.removeItem("token");
   }, [token]);
 
-  // Sync user to localStorage
   useEffect(() => {
     if (user) localStorage.setItem("user", JSON.stringify(user));
     else localStorage.removeItem("user");
@@ -35,39 +27,27 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // REGISTER
   const register = async (username, password) => {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || "Register failed");
-    }
-
-    return await res.json();
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   };
 
-  // LOGIN
-const loginRequest = async (username, password) => {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "Login failed");
-  }
-
-  const data = await res.json(); // expects { token, username }
-  login(data.token, { username: data.username }); // ✅ context sync
-  return data;
-};
+  const loginRequest = async (username, password) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    login(data.token, { username: data.username });
+    return data;
+  };
 
   return (
     <AuthContext.Provider value={{ token, user, login, logout, register, loginRequest }}>

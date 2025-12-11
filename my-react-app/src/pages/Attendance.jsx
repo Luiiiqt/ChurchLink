@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { authFetch } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Attendance() {
+  const { token } = useAuth();
   const [activities, setActivities] = useState([]);
   const [members, setMembers] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -9,20 +11,20 @@ export default function Attendance() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch activities and members
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const acts = await authFetch("/activities");
-        const mems = await authFetch("/members");
-
+        const [acts, mems, allAttendance] = await Promise.all([
+          authFetch("/activities", {}, token),
+          authFetch("/members", {}, token),
+          authFetch("/attendances", {}, token),
+        ]);
         setActivities(acts || []);
         setMembers(mems || []);
 
-        // Auto-select today's activity
         const today = new Date().toISOString().split("T")[0];
         const todaysActivity = (acts || []).find(a => a.date === today);
-        if (todaysActivity) selectActivity(todaysActivity);
+        if (todaysActivity) selectActivity(todaysActivity, allAttendance);
       } catch (err) {
         console.error(err);
         setError("Failed to fetch data");
@@ -33,18 +35,20 @@ export default function Attendance() {
     fetchData();
   }, []);
 
-  // Select activity and load its attendance
-  const selectActivity = async (activity) => {
+  const selectActivity = (activity, allAttendance = null) => {
     setSelectedActivity(activity);
     try {
-      const allAttendance = await authFetch("/attendances");
-      const actAttendance = allAttendance
-        .filter(a => a.activity.activityId === activity.activityId)
-        .reduce((acc, cur) => {
-          acc[cur.member.memberId] = true;
-          return acc;
-        }, {});
-      setAttendance(actAttendance);
+      const fetchAttendances = async () => {
+        const attendancesData = allAttendance || (await authFetch("/attendances", {}, token));
+        const actAttendance = attendancesData
+          .filter(a => a.activity.activityId === activity.activityId)
+          .reduce((acc, cur) => {
+            acc[cur.member.memberId] = true;
+            return acc;
+          }, {});
+        setAttendance(actAttendance);
+      };
+      fetchAttendances();
     } catch (err) {
       console.error(err);
       setError("Failed to fetch attendance");
@@ -52,21 +56,20 @@ export default function Attendance() {
   };
 
   const toggleAttendance = (memberId) => {
-    setAttendance({ ...attendance, [memberId]: !attendance[memberId] });
+    setAttendance(prev => ({ ...prev, [memberId]: !prev[memberId] }));
   };
 
   const addMemberToAttendance = (member) => {
-    setAttendance({ ...attendance, [member.memberId]: true });
+    setAttendance(prev => ({ ...prev, [member.memberId]: true }));
     if (!members.find(m => m.memberId === member.memberId)) {
-      setMembers([...members, member]);
+      setMembers(prev => [...prev, member]);
     }
   };
 
   const saveAttendance = async () => {
     if (!selectedActivity) return;
     try {
-      const allAttendance = await authFetch("/attendances");
-
+      const allAttendance = await authFetch("/attendances", {}, token);
       for (const memberId in attendance) {
         const isChecked = attendance[memberId];
         const existing = allAttendance.find(
@@ -75,15 +78,10 @@ export default function Attendance() {
         );
 
         if (existing) {
-          // Update existing record if changed
           if (!isChecked) {
-            // Optional: Delete if unchecked
-            await authFetch(`/attendances/${existing.attendanceId}`, {
-              method: "DELETE"
-            });
+            await authFetch(`/attendances/${existing.attendanceId}`, { method: "DELETE" }, token);
           }
         } else if (isChecked) {
-          // Create new record
           await authFetch("/attendances", {
             method: "POST",
             body: JSON.stringify({
@@ -92,10 +90,9 @@ export default function Attendance() {
               date: selectedActivity.date,
               typeOfActivity: selectedActivity.activity,
             }),
-          });
+          }, token);
         }
       }
-
       alert("Attendance saved!");
     } catch (err) {
       console.error(err);
@@ -111,7 +108,9 @@ export default function Attendance() {
       <h1 className="text-2xl font-bold mb-4">Attendance</h1>
 
       <select
-        onChange={(e) => selectActivity(activities.find(a => a.activityId === parseInt(e.target.value)))}
+        onChange={(e) =>
+          selectActivity(activities.find(a => a.activityId === parseInt(e.target.value)))
+        }
         value={selectedActivity?.activityId || ""}
         className="border p-2 rounded mb-4"
       >
@@ -125,7 +124,9 @@ export default function Attendance() {
 
       {selectedActivity && (
         <div>
-          <h2 className="font-semibold mb-2">Mark Attendance for "{selectedActivity.activity}"</h2>
+          <h2 className="font-semibold mb-2">
+            Mark Attendance for "{selectedActivity.activity}"
+          </h2>
 
           <ul className="space-y-2 mb-4">
             {members.map(m => (
@@ -146,31 +147,26 @@ export default function Attendance() {
           >
             Save Attendance
           </button>
+
+          <div className="mt-6">
+            <h3 className="font-semibold mb-2">Add Member to Attendance</h3>
+            <select
+              onChange={(e) => {
+                const memberId = parseInt(e.target.value);
+                if (memberId) addMemberToAttendance(members.find(m => m.memberId === memberId));
+              }}
+              className="border p-2 rounded"
+            >
+              <option value="">Select Member to Add</option>
+              {members.filter(m => !attendance[m.memberId]).map(m => (
+                <option key={m.memberId} value={m.memberId}>
+                  {m.firstName} {m.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
-
-      <div className="mt-6">
-        <h3 className="font-semibold mb-2">Add Member to Attendance</h3>
-        <select
-          onChange={(e) => {
-            const memberId = parseInt(e.target.value);
-            if (memberId) {
-              const member = members.find(m => m.memberId === memberId);
-              addMemberToAttendance(member);
-            }
-          }}
-          className="border p-2 rounded"
-        >
-          <option value="">Select Member to Add</option>
-          {members
-            .filter(m => !attendance[m.memberId])
-            .map(m => (
-              <option key={m.memberId} value={m.memberId}>
-                {m.firstName} {m.lastName}
-              </option>
-            ))}
-        </select>
-      </div>
     </div>
   );
 }

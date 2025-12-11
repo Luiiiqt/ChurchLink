@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { authFetch } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Members() {
+  const { token } = useAuth();
   const [members, setMembers] = useState([]);
   const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
 
-  const [search, setSearch] = useState(""); // search state
-
-  // Form state for add/edit
   const [form, setForm] = useState({
     memberId: null,
     firstName: "",
@@ -23,27 +23,25 @@ export default function Members() {
   const [editing, setEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Fetch ministries
   const fetchMinistries = async () => {
     try {
-      const data = await authFetch("/ministries");
-      setMinistries(data);
+      const data = await authFetch("/ministries", {}, token);
+      setMinistries(data || []);
     } catch (err) {
-      console.error("Failed to fetch ministries:", err);
+      console.error(err);
       setError("Cannot load ministries");
     }
   };
 
-  // Fetch members
-  const fetchMembers = async (ministryId) => {
+  const fetchMembers = async (ministryId = "") => {
     setLoading(true);
     setError(null);
     try {
       const endpoint = ministryId ? `/members?ministryId=${ministryId}` : "/members";
-      const data = await authFetch(endpoint);
+      const data = await authFetch(endpoint, {}, token);
       setMembers(data || []);
     } catch (err) {
-      console.error("Failed to fetch members:", err);
+      console.error(err);
       setError("Cannot load members");
       setMembers([]);
     } finally {
@@ -56,17 +54,8 @@ export default function Members() {
     fetchMembers();
   }, []);
 
-  // Handle ministry filter click
-  const handleMinistryClick = (ministryId) => {
-    fetchMembers(ministryId);
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  // Handle form input change
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // Handle form submit (add or edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -74,12 +63,9 @@ export default function Members() {
         await authFetch(`/members/${form.memberId}`, {
           method: "PUT",
           body: JSON.stringify(form),
-        });
+        }, token);
       } else {
-        await authFetch("/members", {
-          method: "POST",
-          body: JSON.stringify(form),
-        });
+        await authFetch("/members", { method: "POST", body: JSON.stringify(form) }, token);
       }
       setForm({
         memberId: null,
@@ -95,12 +81,11 @@ export default function Members() {
       setShowModal(false);
       fetchMembers();
     } catch (err) {
-      console.error("Failed to save member:", err);
+      console.error(err);
       setError("Failed to save member");
     }
   };
 
-  // Handle edit click
   const handleEdit = (member) => {
     setForm({
       memberId: member.memberId,
@@ -110,57 +95,53 @@ export default function Members() {
       dob: member.dob,
       gender: member.gender,
       address: member.address,
-      ministryId: member.ministry?.ministryId || "",
+      ministryId: member.ministryId,
     });
     setEditing(true);
     setShowModal(true);
   };
 
-  // Handle delete
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this member?")) return;
     try {
-      await authFetch(`/members/${id}`, { method: "DELETE" });
+      await authFetch(`/members/${id}`, { method: "DELETE" }, token);
       fetchMembers();
     } catch (err) {
-      console.error("Failed to delete member:", err);
+      console.error(err);
       setError("Failed to delete member");
     }
   };
 
-  // Filter members by search
   const filteredMembers = members.filter(
     (m) =>
       m.firstName.toLowerCase().includes(search.toLowerCase()) ||
       m.lastName.toLowerCase().includes(search.toLowerCase()) ||
-      (m.ministry?.ministry || "").toLowerCase().includes(search.toLowerCase())
+      (ministries.find((min) => min.ministryId === m.ministryId)?.ministryName || "")
+        .toLowerCase()
+        .includes(search.toLowerCase())
   );
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Members</h1>
 
-      {/* Search bar */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search members..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border p-2 rounded w-full"
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Search members..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="border p-2 rounded w-full mb-4"
+      />
 
-      {/* Ministries filter */}
       <div className="mb-4">
         <h2 className="font-semibold">Filter by Ministry</h2>
         {ministries.map((m) => (
           <button
             key={m.ministryId}
             className="mr-2 mb-2 px-3 py-1 bg-blue-500 text-white rounded"
-            onClick={() => handleMinistryClick(m.ministryId)}
+            onClick={() => fetchMembers(m.ministryId)}
           >
-            {m.ministry}
+            {m.ministryName}
           </button>
         ))}
         <button
@@ -190,46 +171,44 @@ export default function Members() {
         </button>
       </div>
 
-      {/* Members list */}
-      <div>
-        {loading ? (
-          <p>Loading members...</p>
-        ) : error ? (
-          <p className="text-red-600">{error}</p>
-        ) : filteredMembers.length === 0 ? (
-          <p>No members found</p>
-        ) : (
-          <ul className="space-y-2">
-            {filteredMembers.map((member) => (
-              <li
-                key={member.memberId}
-                className="p-2 border rounded flex justify-between items-center"
-              >
-                <div>
-                  {member.firstName} {member.lastName} -{" "}
-                  {member.ministry?.ministry || "No ministry"}
-                </div>
-                <div className="space-x-2">
-                  <button
-                    className="px-2 py-1 bg-yellow-400 rounded"
-                    onClick={() => handleEdit(member)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="px-2 py-1 bg-red-500 text-white rounded"
-                    onClick={() => handleDelete(member.memberId)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {loading ? (
+        <p>Loading members...</p>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : filteredMembers.length === 0 ? (
+        <p>No members found</p>
+      ) : (
+        <ul className="space-y-2">
+          {filteredMembers.map((member) => (
+            <li
+              key={member.memberId}
+              className="p-2 border rounded flex justify-between items-center"
+            >
+              <div>
+                {member.firstName} {member.lastName} -{" "}
+                {ministries.find((min) => min.ministryId === member.ministryId)
+                  ?.ministryName || "No ministry"}
+              </div>
+              <div className="space-x-2">
+                <button
+                  className="px-2 py-1 bg-yellow-400 rounded"
+                  onClick={() => handleEdit(member)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="px-2 py-1 bg-red-500 text-white rounded"
+                  onClick={() => handleDelete(member.memberId)}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {/* Modal for Add/Edit */}
+      {/* Modal Form */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow w-full max-w-md">
@@ -266,7 +245,6 @@ export default function Members() {
               <input
                 type="date"
                 name="dob"
-                placeholder="Date of Birth"
                 value={form.dob}
                 onChange={handleChange}
                 required
@@ -286,9 +264,9 @@ export default function Members() {
               <input
                 type="text"
                 name="address"
-                placeholder="Address"
                 value={form.address}
                 onChange={handleChange}
+                placeholder="Address"
                 className="border p-2 rounded w-full"
               />
               <select
@@ -300,7 +278,7 @@ export default function Members() {
                 <option value="">Select Ministry</option>
                 {ministries.map((m) => (
                   <option key={m.ministryId} value={m.ministryId}>
-                    {m.ministry}
+                    {m.ministryName}
                   </option>
                 ))}
               </select>

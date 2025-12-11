@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { authFetch } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Activities() {
+  const { token } = useAuth();
   const [activities, setActivities] = useState([]);
   const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
 
-  // Form state
   const [form, setForm] = useState({
     activityId: null,
     activity: "",
@@ -17,25 +19,22 @@ export default function Activities() {
     ministryId: "",
   });
   const [editing, setEditing] = useState(false);
-  const [search, setSearch] = useState("");
 
-  // Fetch ministries
   const fetchMinistries = async () => {
     try {
-      const data = await authFetch("/ministries");
-      setMinistries(Array.isArray(data) ? data : []);
+      const data = await authFetch("/ministries", {}, token);
+      setMinistries(data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load ministries");
     }
   };
 
-  // Fetch activities
   const fetchActivities = async () => {
     setLoading(true);
     try {
-      const data = await authFetch("/activities");
-      setActivities(Array.isArray(data) ? data : []);
+      const data = await authFetch("/activities", {}, token);
+      setActivities(data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load activities");
@@ -49,9 +48,7 @@ export default function Activities() {
     fetchActivities();
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,15 +57,13 @@ export default function Activities() {
         await authFetch(`/activities/${form.activityId}`, {
           method: "PUT",
           body: JSON.stringify(form),
-        });
+        }, token);
       } else {
         await authFetch("/activities", {
           method: "POST",
           body: JSON.stringify(form),
-        });
+        }, token);
       }
-
-      // Reset form
       setForm({ activityId: null, activity: "", date: "", time: "", place: "", ministryId: "" });
       setEditing(false);
       fetchActivities();
@@ -85,7 +80,7 @@ export default function Activities() {
       date: act.date,
       time: act.time,
       place: act.place,
-      ministryId: act.ministry?.ministryId || "",
+      ministryId: act.ministryId,
     });
     setEditing(true);
   };
@@ -93,7 +88,7 @@ export default function Activities() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this activity?")) return;
     try {
-      await authFetch(`/activities/${id}`, { method: "DELETE" });
+      await authFetch(`/activities/${id}`, { method: "DELETE" }, token);
       fetchActivities();
     } catch (err) {
       console.error(err);
@@ -101,11 +96,9 @@ export default function Activities() {
     }
   };
 
-  const filteredActivities = Array.isArray(activities)
-    ? activities.filter((a) =>
-        a.activity.toLowerCase().includes(search.toLowerCase())
-      )
-    : [];
+  const filteredActivities = activities.filter((a) =>
+    a.activity.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div>
@@ -119,7 +112,6 @@ export default function Activities() {
         className="border p-2 rounded w-full mb-4"
       />
 
-      {/* Add/Edit Form */}
       <div className="mb-6 p-4 border rounded shadow">
         <h2 className="font-semibold mb-2">{editing ? "Edit Activity" : "Add Activity"}</h2>
         <form onSubmit={handleSubmit} className="space-y-2">
@@ -130,7 +122,7 @@ export default function Activities() {
             onChange={handleChange}
             placeholder="Activity Name"
             required
-            className="border p-1 rounded w-full"
+            className="border p-2 rounded w-full"
           />
           <input
             type="date"
@@ -138,7 +130,7 @@ export default function Activities() {
             value={form.date}
             onChange={handleChange}
             required
-            className="border p-1 rounded w-full"
+            className="border p-2 rounded w-full"
           />
           <input
             type="time"
@@ -146,7 +138,7 @@ export default function Activities() {
             value={form.time}
             onChange={handleChange}
             required
-            className="border p-1 rounded w-full"
+            className="border p-2 rounded w-full"
           />
           <input
             type="text"
@@ -154,18 +146,19 @@ export default function Activities() {
             value={form.place}
             onChange={handleChange}
             placeholder="Place"
-            className="border p-1 rounded w-full"
+            className="border p-2 rounded w-full"
           />
           <select
             name="ministryId"
             value={form.ministryId}
             onChange={handleChange}
-            className="border p-1 rounded w-full"
+            required
+            className="border p-2 rounded w-full"
           >
             <option value="">Select Ministry</option>
             {ministries.map((m) => (
               <option key={m.ministryId} value={m.ministryId}>
-                {m.ministry}
+                {m.ministryName}
               </option>
             ))}
           </select>
@@ -178,7 +171,6 @@ export default function Activities() {
         </form>
       </div>
 
-      {/* Activities List */}
       {loading ? (
         <p>Loading...</p>
       ) : filteredActivities.length === 0 ? (
@@ -191,8 +183,7 @@ export default function Activities() {
               className="p-2 border rounded flex justify-between items-center"
             >
               <div>
-                {act.activity} - {act.date} {act.time} (
-                {act.ministry?.ministry || "No ministry"})
+                {act.activity} - {act.date} {act.time} ({ministries.find(m => m.ministryId === act.ministryId)?.ministryName || "No ministry"})
               </div>
               <div className="space-x-2">
                 <button

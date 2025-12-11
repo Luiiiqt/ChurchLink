@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import { authFetch } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
   const { token } = useAuth();
@@ -15,17 +15,19 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const membersData = await authFetch("/members", {}, token);
-      const ministriesData = await authFetch("/ministries", {}, token);
-      const activitiesData = await authFetch("/activities", {}, token);
-      const attendancesData = await authFetch("/attendances", {}, token);
+      const [membersData, ministriesData, activitiesData, attendancesData] = await Promise.all([
+        authFetch("/members", {}, token),        // <-- pass token
+        authFetch("/ministries", {}, token),     // <-- pass token
+        authFetch("/activities", {}, token),     // <-- pass token
+        authFetch("/attendances", {}, token),
+      ]);
 
       setMembers(membersData || []);
       setMinistries(ministriesData || []);
       setActivities(activitiesData || []);
       setAttendances(attendancesData || []);
-    } catch (e) {
-      console.error("Dashboard fetch error:", e);
+    } catch (err) {
+      console.error(err);
       setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
@@ -34,13 +36,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [token]);
 
   const countMembersByMinistry = (ministryId) =>
-    members.filter((m) => m.ministry?.ministryId === ministryId).length;
+    members.filter((m) => m.ministryId === ministryId).length;
 
   if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div>
@@ -74,7 +76,7 @@ export default function Dashboard() {
               key={min.ministryId}
               className="p-2 bg-blue-100 rounded shadow"
             >
-              {min.ministry}: {countMembersByMinistry(min.ministryId)} members
+              {min.ministryName}: {countMembersByMinistry(min.ministryId)} members
             </li>
           ))}
         </ul>

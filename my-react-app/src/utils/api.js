@@ -1,31 +1,25 @@
 import { API_URL } from "../config/constants";
 
-// Get token from localStorage
-export const getToken = () => localStorage.getItem("token");
-
-// Authenticated fetch helper
-export const authFetch = async (endpoint, options = {}) => {
-  const token = getToken();
-  const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
-  console.log("Fetching:", url, "Token:", token);
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
+const buildUrl = (path) => `${API_URL.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+// utils/api.js
+export async function authFetch(endpoint, options = {}, token) {
+  const url = `http://localhost:8000/api${endpoint}`;
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...options, headers, mode: "cors" });
+  const response = await fetch(url, { ...options, headers });
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("API error:", res.status, text);
-    throw new Error(`HTTP ${res.status}: ${text}`);
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    throw new Error("Token expired. Please log in again.");
   }
 
-  try {
-    return await res.json();
-  } catch (e) {
-    return {};
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
-};
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
