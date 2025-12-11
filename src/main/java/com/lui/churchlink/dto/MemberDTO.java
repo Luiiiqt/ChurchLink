@@ -1,95 +1,54 @@
 package com.lui.churchlink.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.lui.churchlink.model.Member;
 import java.time.LocalDate;
 
 public class MemberDTO {
-
-    private int memberId;
-
-    @NotBlank(message = "First name is required")
+    private int id; // maps to memberId in entity
     private String firstName;
-
     private String middleName;
-
-    @NotBlank(message = "Last name is required")
     private String lastName;
-
-    @NotNull(message = "Date of birth is required")
     private LocalDate dob;
-
-    @NotBlank(message = "Gender is required")
     private String gender;
-
-    @NotBlank(message = "Address is required")
     private String address;
+    private Integer ministryId; // Can be null
 
-    @NotNull(message = "Ministry ID is required")
-    private Integer ministryId;
+    public MemberDTO() {}
+
+    // Constructor from Member entity
+    public MemberDTO(Member member) {
+        this.id = member.getMemberId(); // corrected
+        this.firstName = member.getFirstName();
+        this.middleName = member.getMiddleName();
+        this.lastName = member.getLastName();
+        this.dob = member.getDob();
+        this.gender = member.getGender();
+        this.address = member.getAddress();
+        this.ministryId = member.getMinistry() != null ? member.getMinistry().getMinistryId() : null;
+    }
 
     // Getters and Setters
-    public int getMemberId() {
-        return memberId;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setMemberId(int memberId) {
-        this.memberId = memberId;
-    }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
-    public String getFirstName() {
-        return firstName;
-    }
+    public String getMiddleName() { return middleName; }
+    public void setMiddleName(String middleName) { this.middleName = middleName; }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public String getMiddleName() {
-        return middleName;
-    }
+    public LocalDate getDob() { return dob; }
+    public void setDob(LocalDate dob) { this.dob = dob; }
 
-    public void setMiddleName(String middleName) {
-        this.middleName = middleName;
-    }
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
 
-    public String getLastName() {
-        return lastName;
-    }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public LocalDate getDob() {
-        return dob;
-    }
-
-    public void setDob(LocalDate dob) {
-        this.dob = dob;
-    }
-
-    public String getGender() {
-        return gender;
-    }
-
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public Integer getMinistryId() {
-        return ministryId;
-    }
-
-    public void setMinistryId(Integer ministryId) {
-        this.ministryId = ministryId;
-    }
+    public Integer getMinistryId() { return ministryId; }
+    public void setMinistryId(Integer ministryId) { this.ministryId = ministryId; }
 }

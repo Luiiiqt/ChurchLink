@@ -1,44 +1,66 @@
 package com.lui.churchlink.service;
 
+import com.lui.churchlink.dto.ActivityDTO;
 import com.lui.churchlink.model.Activity;
+import com.lui.churchlink.model.Ministry;
 import com.lui.churchlink.repository.ActivityRepository;
+import com.lui.churchlink.repository.MinistryRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
 
     private final ActivityRepository activityRepository;
+    private final MinistryRepository ministryRepository;
 
-    public ActivityService(ActivityRepository activityRepository) {
+    public ActivityService(ActivityRepository activityRepository, MinistryRepository ministryRepository) {
         this.activityRepository = activityRepository;
+        this.ministryRepository = ministryRepository;
     }
 
-    public List<Activity> findAll() {
-        return activityRepository.findAll();
+    public List<ActivityDTO> getAllActivities() {
+        return activityRepository.findAll()
+                .stream()
+                .map(ActivityDTO::new)
+                .collect(Collectors.toList());
     }
 
-    public Activity findById(int id) {
-        return activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found with id " + id));
+    public ActivityDTO saveActivity(Activity activity) {
+        if (activity.getMinistry() != null) {
+            Integer ministryId = activity.getMinistry().getMinistryId();
+            if (ministryId != null) {
+                Ministry ministry = ministryRepository.findById(ministryId)
+                        .orElseThrow(() -> new RuntimeException("Ministry not found"));
+                activity.setMinistry(ministry);
+            }
+        }
+        Activity saved = activityRepository.save(activity);
+        return new ActivityDTO(saved);
     }
 
-    public Activity save(Activity activity) {
-        return activityRepository.save(activity);
+    public ActivityDTO updateActivity(ActivityDTO dto) {
+        Activity activity = activityRepository.findById(dto.getActivityId())
+                .orElseThrow(() -> new RuntimeException("Activity not found"));
+
+        activity.setActivity(dto.getActivity());
+        if (dto.getDate() != null) activity.setDate(dto.getDate());
+        if (dto.getTime() != null) activity.setTime(dto.getTime());
+        activity.setPlace(dto.getPlace());
+
+        if (dto.getMinistryId() != null) {
+            Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                    .orElseThrow(() -> new RuntimeException("Ministry not found"));
+            activity.setMinistry(ministry);
+        }
+
+        Activity updated = activityRepository.save(activity);
+        return new ActivityDTO(updated);
     }
 
-    public Activity update(int id, Activity activity) {
-        Activity existing = findById(id);
-        existing.setActivity(activity.getActivity());
-        existing.setDate(activity.getDate());
-        existing.setPlace(activity.getPlace());
-        existing.setTime(activity.getTime());
-        existing.setMinistry(activity.getMinistry());
-        return activityRepository.save(existing);
-    }
-
-    public void delete(int id) {
+    public void deleteActivity(Integer id) {
         activityRepository.deleteById(id);
     }
 }

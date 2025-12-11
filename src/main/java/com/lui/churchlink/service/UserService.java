@@ -1,5 +1,6 @@
 package com.lui.churchlink.service;
 
+import com.lui.churchlink.dto.RegisterRequest;
 import com.lui.churchlink.model.User;
 import com.lui.churchlink.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,22 +17,10 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Updated to accept full info
-    public void registerUser(String firstName, String middleName, String lastName,
-                             String username, String password, String email) {
-
-        if (userRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("Username already taken");
-        }
-
+    public void registerUser(RegisterRequest request) {
         User user = new User();
-        user.setFirstName(firstName);
-        user.setMiddleName(middleName); // can be null
-        user.setLastName(lastName);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setEmail(email);
-
+        user.setUsername(request.username());
+        user.setPassword(passwordEncoder.encode(request.password())); // encode password!
         userRepository.save(user);
     }
 }

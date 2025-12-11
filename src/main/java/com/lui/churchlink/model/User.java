@@ -4,37 +4,30 @@ import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
+@Table(name = "user")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int userId;
+    private Integer userId;
 
-    private String firstName;
-    private String middleName; // optional
-    private String lastName;
+    @Column(unique = true, nullable = false)
     private String username;
+
+    @Column(nullable = false)
     private String password;
-    private String email;
 
-    // One user manages multiple ministries
     @OneToMany(mappedBy = "leader")
-    private List<Ministry> ministries;
+    private List<Ministry> ministriesLed;
 
-    // Getters and Setters
-    public int getUserId() { return userId; }
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-    public String getMiddleName() { return middleName; }
-    public void setMiddleName(String middleName) { this.middleName = middleName; }
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
+    public Integer getUserId() { return userId; }
+
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public List<Ministry> getMinistries() { return ministries; }
-    public void setMinistries(List<Ministry> ministries) { this.ministries = ministries; }
+
+    public List<Ministry> getMinistriesLed() { return ministriesLed; }
+    public void setMinistriesLed(List<Ministry> ministriesLed) { this.ministriesLed = ministriesLed; }
 }

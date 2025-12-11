@@ -8,6 +8,4 @@ public record AuthRequest(
 
         @NotBlank(message = "Password is required")
         String password
-
-) {
-}
+) {}

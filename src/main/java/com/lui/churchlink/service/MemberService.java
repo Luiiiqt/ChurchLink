@@ -8,6 +8,7 @@ import com.lui.churchlink.repository.MinistryRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MemberService {
@@ -20,16 +21,14 @@ public class MemberService {
         this.ministryRepository = ministryRepository;
     }
 
-    public List<Member> findAll() {
-        return memberRepository.findAll();
+    public List<MemberDTO> getAllMembers() {
+        return memberRepository.findAll()
+                .stream()
+                .map(MemberDTO::new)
+                .collect(Collectors.toList());
     }
 
-    public Member findById(int id) {
-        return memberRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member not found"));
-    }
-
-    public Member save(MemberDTO dto) {
+    public MemberDTO saveMember(MemberDTO dto) {
         Member member = new Member();
         member.setFirstName(dto.getFirstName());
         member.setMiddleName(dto.getMiddleName());
@@ -38,15 +37,17 @@ public class MemberService {
         member.setGender(dto.getGender());
         member.setAddress(dto.getAddress());
 
-        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
-                .orElseThrow(() -> new RuntimeException("Ministry not found"));
-        member.setMinistry(ministry);
+        if (dto.getMinistryId() != null) {
+            Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                    .orElseThrow(() -> new RuntimeException("Ministry not found"));
+            member.setMinistry(ministry);
+        }
 
-        return memberRepository.save(member);
+        Member saved = memberRepository.save(member);
+        return new MemberDTO(saved);
     }
 
-    // ✅ Updated to accept ID + DTO
-    public Member update(int id, MemberDTO dto) {
+    public MemberDTO updateMember(int id, MemberDTO dto) {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
@@ -57,14 +58,20 @@ public class MemberService {
         member.setGender(dto.getGender());
         member.setAddress(dto.getAddress());
 
-        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
-                .orElseThrow(() -> new RuntimeException("Ministry not found"));
-        member.setMinistry(ministry);
+        if (dto.getMinistryId() != null) {
+            Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                    .orElseThrow(() -> new RuntimeException("Ministry not found"));
+            member.setMinistry(ministry);
+        } else {
+            member.setMinistry(null);
+        }
 
-        return memberRepository.save(member);
+        Member updated = memberRepository.save(member);
+        return new MemberDTO(updated);
     }
 
-    public void delete(int id) {
+    public void deleteMember(int id) {
         memberRepository.deleteById(id);
     }
 }
+
