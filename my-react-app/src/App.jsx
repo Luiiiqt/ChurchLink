@@ -1,119 +1,91 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import Login from "./components/auth/Login";
-import Register from "./components/auth/Register";
-import Dashboard from "./components/pages/Dashboard";
-import Home from "./components/pages/Home";
-import UserManagement from "./components/pages/UserManagement";
-import LoadingScreen from "./LoadingScreen";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-export default function App() {
-  const [sidebarToggle, setSidebarToggle] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+// Pages
+import Dashboard from "./pages/Dashboard";
+import Members from "./pages/Members";
+import Attendance from "./pages/Attendance";
+import Activities from "./pages/Activities";
+import Ministry from "./pages/Ministry";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import NotFound from "./pages/NotFound";
+
+function AppInner() {
+  const { token, logout } = useAuth();
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [users, setUsers] = useState([]);
-
-  const [loading, setLoading] = useState(false); // NEW
-
-  function toggleSidebar() {
-    setSidebarToggle(!sidebarToggle);
-  }
-
-  // LOGIN
-  function handleLogin(username, password) {
-    const user = users.find(
-      (u) => u.username === username && u.password === password
-    );
-
-    if (!user) {
-      alert("Invalid username or password");
-      return;
-    }
-
-    // Show loading screen for 1.5 seconds
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setIsLoggedIn(true);
-    }, 1500);
-  }
-
-  // REGISTER
-  function handleRegister(username, password) {
-    const exists = users.some((u) => u.username === username);
-
-    if (exists) {
-      alert("Username already exists");
-      return false;
-    }
-
-    const newUser = { username, password };
-    setUsers((prevUsers) => [...prevUsers, newUser]);
-    alert("Registration successful! You can now log in.");
-    setShowRegister(false);
-    return true;
-  }
-
-  function handleLogout() {
-    setIsLoggedIn(false);
-    setCurrentPage("dashboard");
-  }
-
-  // If loading → show loading screen
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  // If NOT logged in → show login or register
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-gray-100">
-        {!showRegister ? (
-          <Login
-            onLogin={handleLogin}
-            onSwitchToRegister={() => setShowRegister(true)}
-          />
-        ) : (
-          <Register
-            onRegister={handleRegister}
-            onSwitchToLogin={() => setShowRegister(false)}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Logged in → load dashboard
-  let pageContent;
-  switch (currentPage) {
-    case "dashboard":
-      pageContent = <Dashboard />;
-      break;
-    case "home":
-      pageContent = <Home />;
-      break;
-    case "users":
-      pageContent = <UserManagement />;
-      break;
-    default:
-      pageContent = <Dashboard />;
-  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex min-h-screen">
       <Sidebar
-        status={sidebarToggle}
+        status={!!token}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        onLogout={handleLogout}
+        onLogout={logout}
       />
+      <main className="flex-1 bg-gray-100 p-6">
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-      <div className="flex flex-col flex-1">
-        <Header onSidebarToggle={toggleSidebar} />
-        <main className="p-6 flex-1 overflow-auto">{pageContent}</main>
-      </div>
+          {/* Protected routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/members"
+            element={
+              <ProtectedRoute>
+                <Members />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <ProtectedRoute>
+                <Attendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/activities"
+            element={
+              <ProtectedRoute>
+                <Activities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ministries"
+            element={
+              <ProtectedRoute>
+                <Ministry />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }
