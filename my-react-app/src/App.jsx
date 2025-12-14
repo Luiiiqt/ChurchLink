@@ -7,7 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Pages
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
-import Attendance from "./pages/Attendance";
+import AttendancePage from "./pages/AttendancePage"; // combined
 import Activities from "./pages/Activities";
 import Ministry from "./pages/Ministry";
 import Login from "./pages/Login";
@@ -35,7 +35,7 @@ function AppInner() {
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
-          <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+          <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} /> {/* combined */}
           <Route path="/activities" element={<ProtectedRoute><Activities /></ProtectedRoute>} />
           <Route path="/ministries" element={<ProtectedRoute><Ministry /></ProtectedRoute>} />
 

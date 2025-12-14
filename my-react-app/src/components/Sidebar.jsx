@@ -2,17 +2,15 @@ import { useNavigate } from "react-router-dom";
 
 function Sidebar({ status, currentPage, setCurrentPage, onLogout }) {
   const navigate = useNavigate();
-
   if (!status) return null;
 
-const menuItems = [
-  { icon: "🏠", text: "Dashboard", page: "dashboard", path: "/" },
-  { icon: "👥", text: "Members", page: "members", path: "/members" },
-  { icon: "📋", text: "Attendance", page: "attendance", path: "/attendance" },
-  { icon: "📂", text: "Ministries", page: "ministries", path: "/ministries" },
-  { icon: "🎯", text: "Activities", page: "activities", path: "/activities" },
-];
-
+  const menuItems = [
+    { icon: "🏠", text: "Dashboard", page: "dashboard", path: "/" },
+    { icon: "👥", text: "Members", page: "members", path: "/members" },
+    { icon: "📋", text: "Attendance", page: "attendance", path: "/attendance" }, // Combined page
+    { icon: "📂", text: "Ministries", page: "ministries", path: "/ministries" },
+    { icon: "🎯", text: "Activities", page: "activities", path: "/activities" },
+  ];
 
   return (
     <aside className="bg-gradient-to-b from-green-900 via-emerald-800 to-green-800 text-white min-h-screen p-6 flex flex-col shadow-2xl w-64">

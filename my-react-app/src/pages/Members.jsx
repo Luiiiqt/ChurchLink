@@ -23,22 +23,11 @@ export default function Members() {
   const [editing, setEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  const fetchMinistries = async () => {
-    try {
-      const data = await authFetch("/ministries", {}, token);
-      setMinistries(data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Cannot load ministries");
-    }
-  };
-
-  const fetchMembers = async (ministryId = "") => {
+  const fetchMembers = async () => {
     setLoading(true);
     setError(null);
     try {
-      const endpoint = ministryId ? `/members?ministryId=${ministryId}` : "/members";
-      const data = await authFetch(endpoint, {}, token);
+      const data = await authFetch("/members", {}, token);
       setMembers(data || []);
     } catch (err) {
       console.error(err);
@@ -46,6 +35,15 @@ export default function Members() {
       setMembers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMinistries = async () => {
+    try {
+      const data = await authFetch("/ministries", {}, token);
+      setMinistries(data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -60,10 +58,11 @@ export default function Members() {
     e.preventDefault();
     try {
       if (editing) {
-        await authFetch(`/members/${form.memberId}`, {
-          method: "PUT",
-          body: JSON.stringify(form),
-        }, token);
+        await authFetch(
+          `/members/${form.memberId}`,
+          { method: "PUT", body: JSON.stringify(form) },
+          token
+        );
       } else {
         await authFetch("/members", { method: "POST", body: JSON.stringify(form) }, token);
       }
@@ -115,7 +114,10 @@ export default function Members() {
   const filteredMembers = members.filter(
     (m) =>
       m.firstName.toLowerCase().includes(search.toLowerCase()) ||
+      m.middleName?.toLowerCase().includes(search.toLowerCase()) ||
       m.lastName.toLowerCase().includes(search.toLowerCase()) ||
+      m.address?.toLowerCase().includes(search.toLowerCase()) ||
+      m.gender?.toLowerCase().includes(search.toLowerCase()) ||
       (ministries.find((min) => min.ministryId === m.ministryId)?.ministryName || "")
         .toLowerCase()
         .includes(search.toLowerCase())
@@ -134,22 +136,6 @@ export default function Members() {
       />
 
       <div className="mb-4">
-        <h2 className="font-semibold">Filter by Ministry</h2>
-        {ministries.map((m) => (
-          <button
-            key={m.ministryId}
-            className="mr-2 mb-2 px-3 py-1 bg-blue-500 text-white rounded"
-            onClick={() => fetchMembers(m.ministryId)}
-          >
-            {m.ministryName}
-          </button>
-        ))}
-        <button
-          className="mr-2 mb-2 px-3 py-1 bg-gray-500 text-white rounded"
-          onClick={() => fetchMembers()}
-        >
-          All
-        </button>
         <button
           className="mr-2 mb-2 px-3 py-1 bg-green-600 text-white rounded"
           onClick={() => {
@@ -178,40 +164,63 @@ export default function Members() {
       ) : filteredMembers.length === 0 ? (
         <p>No members found</p>
       ) : (
-        <ul className="space-y-2">
-          {filteredMembers.map((member) => (
-            <li
-              key={member.memberId}
-              className="p-2 border rounded flex justify-between items-center"
-            >
-              <div>
-                {member.firstName} {member.lastName} -{" "}
-                {ministries.find((min) => min.ministryId === member.ministryId)
-                  ?.ministryName || "No ministry"}
-              </div>
-              <div className="space-x-2">
-                <button
-                  className="px-2 py-1 bg-yellow-400 rounded"
-                  onClick={() => handleEdit(member)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="px-2 py-1 bg-red-500 text-white rounded"
-                  onClick={() => handleDelete(member.memberId)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <table className="min-w-full border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border px-2 py-1">First Name</th>
+              <th className="border px-2 py-1">Middle Name</th>
+              <th className="border px-2 py-1">Last Name</th>
+              <th className="border px-2 py-1">DOB</th>
+              <th className="border px-2 py-1">Gender</th>
+              <th className="border px-2 py-1">Address</th>
+              <th className="border px-2 py-1">Ministry</th>
+              <th className="border px-2 py-1">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredMembers.map((member) => (
+              <tr key={member.memberId} className="hover:bg-gray-100">
+                <td className="border px-2 py-1">{member.firstName}</td>
+                <td className="border px-2 py-1">{member.middleName}</td>
+                <td className="border px-2 py-1">{member.lastName}</td>
+                <td className="border px-2 py-1">{member.dob}</td>
+                <td className="border px-2 py-1">{member.gender}</td>
+                <td className="border px-2 py-1">{member.address}</td>
+                <td className="border px-2 py-1">
+                  {ministries.find((min) => min.ministryId === member.ministryId)?.ministryName || "N/A"}
+                </td>
+                <td className="border px-2 py-1 space-x-2">
+                  <button
+                    className="px-2 py-1 bg-yellow-400 rounded"
+                    onClick={() => handleEdit(member)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="px-2 py-1 bg-red-500 text-white rounded"
+                    onClick={() => handleDelete(member.memberId)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {/* Modal Form */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow w-full max-w-md">
+          <div className="bg-white p-6 rounded shadow w-full max-w-md relative">
+            {/* X button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-lg"
+            >
+              &times;
+            </button>
+
             <h2 className="text-xl font-semibold mb-4">
               {editing ? "Edit Member" : "Add Member"}
             </h2>
