@@ -1,7 +1,6 @@
 package com.lui.churchlink.controller.api;
 
 import com.lui.churchlink.dto.ActivityDTO;
-import com.lui.churchlink.model.Activity;
 import com.lui.churchlink.service.ActivityService;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,14 +22,19 @@ public class ActivityController {
     }
 
     @PostMapping
-    public ActivityDTO create(@RequestBody Activity activity) {
-        return activityService.saveActivity(activity);
+    public ActivityDTO create(@RequestBody ActivityDTO dto) {
+        return activityService.saveActivity(dto);
     }
 
     @PutMapping("/{id}")
     public ActivityDTO update(@PathVariable int id, @RequestBody ActivityDTO dto) {
         dto.setActivityId(id);
         return activityService.updateActivity(dto);
+    }
+
+    @PutMapping("/{id}/reschedule")
+    public ActivityDTO reschedule(@PathVariable int id, @RequestBody ActivityDTO dto) {
+        return activityService.rescheduleActivity(id, dto);
     }
 
     @DeleteMapping("/{id}")

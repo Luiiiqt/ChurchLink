@@ -9,7 +9,7 @@ public class Ministry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int ministryId;
+    private int ministryId; // changed to Integer
 
     private String ministry;
 
@@ -24,7 +24,7 @@ public class Ministry {
     private List<Activity> activities;
 
     // Getters & Setters
-    public int getMinistryId() { return ministryId; }
+    public Integer getMinistryId() { return ministryId; }
     public String getMinistry() { return ministry; }
     public void setMinistry(String ministry) { this.ministry = ministry; }
     public User getLeader() { return leader; }

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "attendance")
 public class Attendance {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int attendanceId;
@@ -19,7 +20,6 @@ public class Attendance {
     private Activity activity;
 
     private LocalDate date;
-    private String typeOfActivity;
 
     // Getters & Setters
     public int getAttendanceId() { return attendanceId; }
@@ -33,7 +33,4 @@ public class Attendance {
 
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }
-
-    public String getTypeOfActivity() { return typeOfActivity; }
-    public void setTypeOfActivity(String typeOfActivity) { this.typeOfActivity = typeOfActivity; }
 }

@@ -7,6 +7,8 @@ import com.lui.churchlink.repository.ActivityRepository;
 import com.lui.churchlink.repository.MinistryRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,39 +30,61 @@ public class ActivityService {
                 .collect(Collectors.toList());
     }
 
-    public ActivityDTO saveActivity(Activity activity) {
-        if (activity.getMinistry() != null) {
-            Integer ministryId = activity.getMinistry().getMinistryId();
-            if (ministryId != null) {
-                Ministry ministry = ministryRepository.findById(ministryId)
-                        .orElseThrow(() -> new RuntimeException("Ministry not found"));
-                activity.setMinistry(ministry);
-            }
-        }
-        Activity saved = activityRepository.save(activity);
-        return new ActivityDTO(saved);
+    public ActivityDTO saveActivity(ActivityDTO dto) {
+        Activity activity = new Activity();
+        applyCommonFields(activity, dto);
+        return new ActivityDTO(activityRepository.save(activity));
     }
 
     public ActivityDTO updateActivity(ActivityDTO dto) {
         Activity activity = activityRepository.findById(dto.getActivityId())
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
+        applyCommonFields(activity, dto);
+        return new ActivityDTO(activityRepository.save(activity));
+    }
 
-        activity.setActivity(dto.getActivity());
-        if (dto.getDate() != null) activity.setDate(dto.getDate());
-        if (dto.getTime() != null) activity.setTime(dto.getTime());
+    private void applyCommonFields(Activity activity, ActivityDTO dto) {
+        if (dto.getDate() != null && !dto.getDate().isBlank())
+            activity.setDate(LocalDate.parse(dto.getDate()));
+        if (dto.getTime() != null && !dto.getTime().isBlank())
+            activity.setTime(LocalTime.parse(dto.getTime()));
+
         activity.setPlace(dto.getPlace());
+        activity.setActivity(dto.getActivity() != null && !dto.getActivity().isBlank() ? dto.getActivity() : "Unnamed Activity");
 
-        if (dto.getMinistryId() != null) {
-            Ministry ministry = ministryRepository.findById(dto.getMinistryId())
-                    .orElseThrow(() -> new RuntimeException("Ministry not found"));
-            activity.setMinistry(ministry);
-        }
+        if (dto.getMinistryId() == null)
+            throw new RuntimeException("Ministry is required for activities");
 
-        Activity updated = activityRepository.save(activity);
-        return new ActivityDTO(updated);
+        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                .orElseThrow(() -> new RuntimeException("Ministry not found"));
+        activity.setMinistry(ministry);
+
+        // Remove general/eventType handling
+        activity.setEventType(null);
+    }
+
+    public ActivityDTO rescheduleActivity(Integer id, ActivityDTO dto) {
+        Activity activity = activityRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Activity not found"));
+        if (dto.getDate() != null && !dto.getDate().isBlank())
+            activity.setDate(LocalDate.parse(dto.getDate()));
+        if (dto.getTime() != null && !dto.getTime().isBlank())
+            activity.setTime(LocalTime.parse(dto.getTime()));
+        activity.setStatus(Activity.ActivityStatus.RESCHEDULED);
+        return new ActivityDTO(activityRepository.save(activity));
     }
 
     public void deleteActivity(Integer id) {
         activityRepository.deleteById(id);
+    }
+
+    // -------------------------
+    // New: Mark activity as completed
+    // -------------------------
+    public void markCompleted(Integer activityId) {
+        Activity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new RuntimeException("Activity not found"));
+        activity.setCompleted(true); // also sets status to COMPLETED
+        activityRepository.save(activity);
     }
 }

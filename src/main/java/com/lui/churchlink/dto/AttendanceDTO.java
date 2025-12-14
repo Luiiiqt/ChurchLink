@@ -4,8 +4,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class AttendanceDTO {
+
     private int attendanceId;
 
+    // Member info
     private int memberId;
     private String memberFirstName;
     private String memberMiddleName;
@@ -14,28 +16,29 @@ public class AttendanceDTO {
     private String memberGender;
     private String memberAddress;
 
+    // Ministry info
     private Integer ministryId;
     private String ministryName;
 
-    private int activityId;
+    // Activity info (nullable for general attendance)
+    private Integer activityId;
     private String activityName;
     private LocalDate activityDate;
     private LocalTime activityTime;
     private String activityPlace;
 
-    private String typeOfActivity;
+    // Is general attendance (true if activity is null)
+    private boolean general;
 
-    // Default constructor
     public AttendanceDTO() {}
 
-    // Constructor matching your JPQL query
     public AttendanceDTO(
             int attendanceId,
             int memberId, String memberFirstName, String memberMiddleName, String memberLastName,
             LocalDate memberDob, String memberGender, String memberAddress,
             Integer ministryId, String ministryName,
-            int activityId, String activityName, LocalDate activityDate, LocalTime activityTime, String activityPlace,
-            String typeOfActivity
+            Integer activityId, String activityName, LocalDate activityDate, LocalTime activityTime, String activityPlace,
+            boolean general
     ) {
         this.attendanceId = attendanceId;
         this.memberId = memberId;
@@ -52,10 +55,10 @@ public class AttendanceDTO {
         this.activityDate = activityDate;
         this.activityTime = activityTime;
         this.activityPlace = activityPlace;
-        this.typeOfActivity = typeOfActivity;
+        this.general = general;
     }
 
-    // Getters and Setters for all fields
+    // ---------- Getters & Setters ----------
     public int getAttendanceId() { return attendanceId; }
     public void setAttendanceId(int attendanceId) { this.attendanceId = attendanceId; }
 
@@ -86,8 +89,8 @@ public class AttendanceDTO {
     public String getMinistryName() { return ministryName; }
     public void setMinistryName(String ministryName) { this.ministryName = ministryName; }
 
-    public int getActivityId() { return activityId; }
-    public void setActivityId(int activityId) { this.activityId = activityId; }
+    public Integer getActivityId() { return activityId; }
+    public void setActivityId(Integer activityId) { this.activityId = activityId; }
 
     public String getActivityName() { return activityName; }
     public void setActivityName(String activityName) { this.activityName = activityName; }
@@ -101,6 +104,6 @@ public class AttendanceDTO {
     public String getActivityPlace() { return activityPlace; }
     public void setActivityPlace(String activityPlace) { this.activityPlace = activityPlace; }
 
-    public String getTypeOfActivity() { return typeOfActivity; }
-    public void setTypeOfActivity(String typeOfActivity) { this.typeOfActivity = typeOfActivity; }
+    public boolean isGeneral() { return general; }
+    public void setGeneral(boolean general) { this.general = general; }
 }

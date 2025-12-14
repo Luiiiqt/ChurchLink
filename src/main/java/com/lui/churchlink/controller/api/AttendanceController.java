@@ -1,9 +1,10 @@
 package com.lui.churchlink.controller.api;
 
 import com.lui.churchlink.dto.AttendanceDTO;
-import com.lui.churchlink.model.Attendance;
+import com.lui.churchlink.dto.MemberAttendanceResponse;
 import com.lui.churchlink.service.AttendanceService;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -16,59 +17,69 @@ public class AttendanceController {
         this.attendanceService = attendanceService;
     }
 
+    // ------------------------
+    // General attendance endpoints
+    // ------------------------
+
+    // GET all members with general attendance status
+    @GetMapping("/general/members")
+    public List<MemberAttendanceResponse> getGeneralMembers() {
+        return attendanceService.getGeneralAttendance();
+    }
+
+    // ------------------------
+    // Specific activity attendance endpoints
+    // ------------------------
+
+    // GET members for a specific activity
+    @GetMapping("/activity/{activityId}/members")
+    public List<MemberAttendanceResponse> getSpecificMembers(@PathVariable Integer activityId) {
+        return attendanceService.getSpecificAttendance(activityId);
+    }
+
+    // ------------------------
+    // Attendance record endpoints
+    // ------------------------
+
+    // GET all attendance records (full DTO)
+    @GetMapping("/records")
+    public List<AttendanceDTO> getAttendanceRecords() {
+        return attendanceService.getAttendanceRecords();
+    }
+
+    // Shortcut: allow GET /api/attendances to return all records
     @GetMapping
-    public List<AttendanceDTO> getAll() {
-        return attendanceService.getAllAttendances();
+    public List<AttendanceDTO> getAllAttendances() {
+        return attendanceService.getAttendanceRecords();
     }
 
+    // ------------------------
+    // Save / Delete endpoints
+    // ------------------------
+
+    // Save attendance
     @PostMapping
-    public AttendanceDTO create(@RequestBody Attendance attendance) {
-        Attendance saved = attendanceService.saveAttendance(attendance);
-        return new AttendanceDTO(
-                saved.getAttendanceId(),
-                saved.getMember().getMemberId(),
-                saved.getMember().getFirstName(),
-                saved.getMember().getMiddleName(),
-                saved.getMember().getLastName(),
-                saved.getMember().getDob(),
-                saved.getMember().getGender(),
-                saved.getMember().getAddress(),
-                saved.getMember().getMinistry() != null ? saved.getMember().getMinistry().getMinistryId() : null,
-                saved.getMember().getMinistry() != null ? saved.getMember().getMinistry().getMinistry() : null,
-                saved.getActivity().getActivityId(),
-                saved.getActivity().getActivity(),
-                saved.getActivity().getDate(),
-                saved.getActivity().getTime(),
-                saved.getActivity().getPlace(),
-                saved.getTypeOfActivity()
-        );
+    public void saveAttendance(@RequestBody MemberAttendanceRequest request) {
+        attendanceService.saveAttendance(request.getMemberId(), request.getActivityId());
     }
 
-    @PutMapping("/{id}")
-    public AttendanceDTO update(@PathVariable int id, @RequestBody Attendance updatedAttendance) {
-        Attendance existing = attendanceService.saveAttendance(updatedAttendance); // Or implement find + update in service
-        return new AttendanceDTO(
-                existing.getAttendanceId(),
-                existing.getMember().getMemberId(),
-                existing.getMember().getFirstName(),
-                existing.getMember().getMiddleName(),
-                existing.getMember().getLastName(),
-                existing.getMember().getDob(),
-                existing.getMember().getGender(),
-                existing.getMember().getAddress(),
-                existing.getMember().getMinistry() != null ? existing.getMember().getMinistry().getMinistryId() : null,
-                existing.getMember().getMinistry() != null ? existing.getMember().getMinistry().getMinistry() : null,
-                existing.getActivity().getActivityId(),
-                existing.getActivity().getActivity(),
-                existing.getActivity().getDate(),
-                existing.getActivity().getTime(),
-                existing.getActivity().getPlace(),
-                existing.getTypeOfActivity()
-        );
+    // Delete attendance
+    @DeleteMapping("/{attendanceId}")
+    public void delete(@PathVariable Integer attendanceId) {
+        attendanceService.deleteAttendance(attendanceId);
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable int id) {
-        attendanceService.deleteAttendance(id);
+    // ------------------------
+    // DTO for frontend POST
+    // ------------------------
+    public static class MemberAttendanceRequest {
+        private Integer memberId;
+        private Integer activityId;
+
+        public Integer getMemberId() { return memberId; }
+        public void setMemberId(Integer memberId) { this.memberId = memberId; }
+
+        public Integer getActivityId() { return activityId; }
+        public void setActivityId(Integer activityId) { this.activityId = activityId; }
     }
 }

@@ -1,63 +1,48 @@
 package com.lui.churchlink.dto;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-
 public class ActivityDTO {
-
     private Integer activityId;
     private String activity;
-    private LocalDate date; // Type-safe
-    private LocalTime time; // Type-safe
+    private String eventType; // for general activities
+    private String date;      // yyyy-MM-dd
+    private String time;      // HH:mm
     private String place;
-    private Integer ministryId;
-    private String ministryName;
+    private Boolean isGeneral;
+    private Integer ministryId; // optional for general
+    private String status;
 
     public ActivityDTO() {}
 
-    // Constructor from entity fields
-    public ActivityDTO(Integer activityId, String activity, LocalDate date, LocalTime time, String place, Integer ministryId, String ministryName) {
-        this.activityId = activityId;
-        this.activity = activity;
-        this.date = date;
-        this.time = time;
-        this.place = place;
-        this.ministryId = ministryId;
-        this.ministryName = ministryName;
+    public ActivityDTO(com.lui.churchlink.model.Activity activity) {
+        this.activityId = activity.getActivityId();
+        this.activity = activity.getActivity();
+        this.eventType = activity.getEventType();
+        this.place = activity.getPlace();
+        this.isGeneral = activity.isGeneral();
+        this.date = activity.getDate() != null ? activity.getDate().toString() : null;
+        this.time = activity.getTime() != null ? activity.getTime().toString() : null;
+        this.ministryId = activity.getMinistry() != null ? activity.getMinistry().getMinistryId() : null;
+        this.status = activity.getStatus() != null ? activity.getStatus().name() : null;
     }
 
-    // Constructor from Activity entity
-    public ActivityDTO(com.lui.churchlink.model.Activity activityEntity) {
-        this.activityId = activityEntity.getActivityId();
-        this.activity = activityEntity.getActivity();
-        this.date = activityEntity.getDate();
-        this.time = activityEntity.getTime();
-        this.place = activityEntity.getPlace();
-        if (activityEntity.getMinistry() != null) {
-            this.ministryId = activityEntity.getMinistry().getMinistryId();
-            this.ministryName = activityEntity.getMinistry().getMinistry();
-        }
-    }
-
-    // Getters & Setters
+    // Getters / Setters
     public Integer getActivityId() { return activityId; }
     public void setActivityId(Integer activityId) { this.activityId = activityId; }
-
     public String getActivity() { return activity; }
     public void setActivity(String activity) { this.activity = activity; }
-
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-
-    public LocalTime getTime() { return time; }
-    public void setTime(LocalTime time) { this.time = time; }
-
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
+    public String getTime() { return time; }
+    public void setTime(String time) { this.time = time; }
     public String getPlace() { return place; }
     public void setPlace(String place) { this.place = place; }
-
+    public Boolean isGeneral() { return isGeneral != null && isGeneral; }
+    public void setGeneral(Boolean general) { isGeneral = general; }
     public Integer getMinistryId() { return ministryId; }
     public void setMinistryId(Integer ministryId) { this.ministryId = ministryId; }
-
-    public String getMinistryName() { return ministryName; }
-    public void setMinistryName(String ministryName) { this.ministryName = ministryName; }
+    public boolean isMinistryValid() { return isGeneral() || (ministryId != null); }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }
