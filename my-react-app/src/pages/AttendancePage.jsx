@@ -1,256 +1,273 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { authFetch } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function AttendancePage() {
   const { token } = useAuth();
-
-  // Data states
-  const [activities, setActivities] = useState([]);
-  const [ministries, setMinistries] = useState([]);
   const [members, setMembers] = useState([]);
-  const [attendance, setAttendance] = useState({});
+  const [activities, setActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [generalName, setGeneralName] = useState("Sunday Service");
+  const [presentIds, setPresentIds] = useState(new Set());
   const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activityType, setActivityType] = useState("GENERAL");
-  const [form, setForm] = useState({
-    activityName: "Sunday Service",
-    date: new Date().toISOString().split("T")[0],
-    time: "",
-  });
 
-  const normalizeMinistries = (data) =>
-    (data || []).map((m) => ({
-      ministryId: m.ministryId ?? m.ministry_id,
-      ministryName: m.ministry ?? m.ministryName,
-    }));
-
-  // Load all necessary data once
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [acts, mins, recData] = await Promise.all([
-          authFetch("/activities", {}, token),
-          authFetch("/ministries", {}, token),
-          authFetch("/attendances/records", {}, token),
-        ]);
-
-        setActivities(Array.isArray(acts) ? acts.filter(a => a.status !== "CANCELLED") : []);
-        setMinistries(normalizeMinistries(mins));
-        setRecords(Array.isArray(recData) ? recData : []);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [token]);
-
-  // Load members for GENERAL or SPECIFIC attendance
-  const loadMembers = async (type, activity = null) => {
+  // -------------------------
+  // Load members & activities
+  // -------------------------
+  const loadMembersAndActivities = async () => {
     setLoading(true);
-    setError(null);
-    setActivityType(type);
-    setSelectedActivity(activity);
     try {
-      const endpoint = type === "GENERAL"
-        ? "/attendances/general/members"
-        : `/attendances/activity/${activity.activityId}/members`;
-      const data = await authFetch(endpoint, {}, token);
-      setMembers(data || []);
-      const map = {};
-      (data || []).forEach(m => map[m.memberId] = m.present);
-      setAttendance(map);
+      const [memData, actData] = await Promise.all([
+        authFetch("/members", {}, token),
+        authFetch("/activities", {}, token),
+      ]);
+
+      setMembers(Array.isArray(memData) ? memData : []);
+
+      const normalizedActivities = (Array.isArray(actData) ? actData : [])
+        .map(a => ({ ...a, completed: a.status?.toUpperCase() === "COMPLETED" }))
+        .filter(a => !a.completed);
+
+      setActivities(normalizedActivities);
     } catch {
-      setError("Failed to load members");
+      setError("Failed to load members or activities");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleAttendance = useCallback(
-    (memberId) => setAttendance(prev => ({ ...prev, [memberId]: !prev[memberId] })),
-    []
-  );
+  useEffect(() => {
+    if (token) loadMembersAndActivities();
+  }, [token]);
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Save attendance
-  const saveAttendance = async () => {
-    if (members.length === 0) return;
-
+  // -------------------------
+  // Load attendance records
+  // -------------------------
+  const loadRecords = async () => {
     try {
-      const today = form.date;
-      const requests = Object.entries(attendance)
-        .filter(([, present]) => present)
-        .map(([memberId]) => {
-          if (activityType === "GENERAL") {
-            const { activityName, date, time } = form;
-            return authFetch("/attendances/general", {
-              method: "POST",
-              body: JSON.stringify({ memberId: parseInt(memberId), activity: activityName, date, time }),
-            }, token);
-          } else {
-            return authFetch("/attendances/specific", {
-              method: "POST",
-              body: JSON.stringify({ memberId: parseInt(memberId), activityId: selectedActivity.activityId }),
-            }, token);
-          }
-        });
-
-      await Promise.all(requests);
-
-      // Update records locally instantly
-      const newRecords = members.map(m => ({
-        memberId: m.memberId,
-        memberFirstName: m.firstName,
-        memberLastName: m.lastName,
-        ministryId: m.ministryId,
-        ministryName: ministries.find(x => x.ministryId === m.ministryId)?.ministryName || "Unknown",
-        activity_id: activityType === "GENERAL" ? null : selectedActivity.activityId,
-        activityName: activityType === "GENERAL" ? form.activityName : selectedActivity.activity,
-        date: today,
-        present: !!attendance[m.memberId],
-      }));
-
-      setRecords(prev => [...prev, ...newRecords]);
-
-      // Reset for next attendance
-      setAttendance({});
-      setMembers([]);
-      if (activityType === "GENERAL") setForm({ ...form, time: "" });
-      else setActivities(prev => prev.filter(a => a.activityId !== selectedActivity.activityId));
-      setSelectedActivity(null);
-
-      alert("Attendance saved!");
+      const data = await authFetch("/attendances/sessions", {}, token);
+      setRecords(Array.isArray(data) ? data : []);
     } catch {
-      setError("Failed to save attendance");
+      setError("Failed to load attendance records");
     }
   };
 
-  const presentCount = Object.values(attendance).filter(Boolean).length;
+  useEffect(() => {
+    loadRecords();
+  }, []);
 
-  // Group records by date for display
-  const groupedRecords = records.reduce((acc, r) => {
-    if (!acc[r.date]) acc[r.date] = [];
-    acc[r.date].push(r);
-    return acc;
-  }, {});
+  // -------------------------
+  // Toggle present/absent
+  // -------------------------
+  const togglePresent = (memberId) => {
+    setPresentIds(prev => {
+      const copy = new Set(prev);
+      copy.has(memberId) ? copy.delete(memberId) : copy.add(memberId);
+      return copy;
+    });
+  };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
+  // -------------------------
+  // Save attendance
+  // -------------------------
+  const saveAttendance = async () => {
+    if (presentIds.size === 0) {
+      alert("Select at least one member");
+      return;
+    }
 
+    setLoading(true);
+    try {
+      const membersForActivity = selectedActivity
+        ? members.filter(m => m.ministryId === selectedActivity.ministryId)
+        : members;
+
+      const payload = {
+        activityId: selectedActivity?.activityId || null,
+        activityName: selectedActivity?.activity || generalName,
+        date: new Date().toISOString().slice(0, 10),
+        present: Array.from(presentIds),
+        absent: membersForActivity
+          .map(m => m.memberId)
+          .filter(id => !presentIds.has(id)),
+      };
+
+      await authFetch("/attendances/session", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }, token);
+
+      alert("Attendance saved!");
+      setPresentIds(new Set());
+      setSelectedActivity(null);
+
+      await loadMembersAndActivities();
+      await loadRecords();
+    } catch {
+      setError("Failed to save attendance");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -------------------------
+  // Separate records
+  // -------------------------
+  const generalRecords = records.filter(r => !r.activityId);
+  const specificRecords = records.filter(r => r.activityId);
+
+  // -------------------------
+  // Helper: get present/absent names filtered by ministry
+  // -------------------------
+  const getMemberNames = (record) => {
+    const activity = activities.find(a => a.activityId === record.activityId);
+
+    // Only members of the activity's ministry
+    const relevantMembers = activity
+      ? members.filter(m => m.ministryId === activity.ministryId)
+      : members;
+
+    const presentIdsFromRecord = (record.present || []).map(id => Number(id));
+    const absentIdsFromRecord = (record.absent || []).map(id => Number(id));
+
+    const presentMembers = relevantMembers
+      .filter(m => presentIdsFromRecord.includes(m.memberId))
+      .map(m => `${m.firstName} ${m.lastName}`);
+
+    const absentMembers = relevantMembers
+      .filter(m => absentIdsFromRecord.includes(m.memberId))
+      .map(m => `${m.firstName} ${m.lastName}`);
+
+    return { presentMembers, absentMembers };
+  };
+
+  // -------------------------
+  // Members filtered for form
+  // -------------------------
+  const membersForAttendance = selectedActivity
+    ? members.filter(m => m.ministryId === selectedActivity.ministryId)
+    : members;
+
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold text-center mb-6">Attendance</h1>
 
-      {/* Attendance Type */}
-      <div className="flex justify-center gap-4 mb-6">
+      {/* Attendance Form */}
+      <div className="bg-white shadow rounded p-4 mb-6">
+        <p className="mb-2 font-medium">Take Attendance</p>
+
+        <div className="mb-4 flex gap-4">
+          <select
+            className="border p-2 rounded flex-1"
+            value={selectedActivity?.activityId || ""}
+            onChange={(e) => {
+              const act = activities.find(a => a.activityId === Number(e.target.value));
+              setSelectedActivity(act || null);
+              setPresentIds(new Set());
+            }}
+          >
+            <option value="">General Attendance</option>
+            {activities.map(a => (
+              <option key={a.activityId} value={a.activityId}>
+                {a.activity} ({a.date})
+              </option>
+            ))}
+          </select>
+
+          {!selectedActivity && (
+            <input
+              type="text"
+              className="border p-2 rounded flex-1"
+              value={generalName}
+              onChange={(e) => setGeneralName(e.target.value)}
+            />
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+          {membersForAttendance.map(m => (
+            <label
+              key={m.memberId}
+              className={`p-2 border rounded flex items-center gap-2 cursor-pointer ${
+                presentIds.has(m.memberId) ? "bg-green-100 border-green-400" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={presentIds.has(m.memberId)}
+                onChange={() => togglePresent(m.memberId)}
+              />
+              {m.firstName} {m.lastName}
+            </label>
+          ))}
+        </div>
+
         <button
-          onClick={() => loadMembers("GENERAL")}
-          className={`px-6 py-2 rounded font-semibold ${activityType === "GENERAL" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+          onClick={saveAttendance}
+          className="mt-4 w-full bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700"
         >
-          General
-        </button>
-        <button
-          onClick={() => { setActivityType("SPECIFIC"); setMembers([]); setAttendance({}); }}
-          className={`px-6 py-2 rounded font-semibold ${activityType === "SPECIFIC" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-        >
-          Specific
+          Save Attendance
         </button>
       </div>
 
-      {/* Form for GENERAL */}
-      {activityType === "GENERAL" && members.length > 0 && (
-        <div className="mb-4 space-y-2">
-          <input
-            name="activityName"
-            value={form.activityName}
-            onChange={handleFormChange}
-            placeholder="Activity Name"
-            className="border p-2 rounded w-full"
-          />
-          <input name="date" type="date" value={form.date} onChange={handleFormChange} className="border p-2 rounded w-full" />
-          <input name="time" type="time" value={form.time} onChange={handleFormChange} className="border p-2 rounded w-full" />
-        </div>
-      )}
-
-      {/* Form for SPECIFIC */}
-      {activityType === "SPECIFIC" && (
-        <select
-          className="w-full border p-2 rounded mb-4"
-          value={selectedActivity?.activityId || ""}
-          onChange={(e) => {
-            const act = activities.find(a => a.activityId === Number(e.target.value));
-            if (act) loadMembers("SPECIFIC", act);
-          }}
-        >
-          <option value="">Select Activity</option>
-          {activities.filter(a => !a.isGeneral).map(a => (
-            <option key={a.activityId} value={a.activityId}>{a.activity}</option>
-          ))}
-        </select>
-      )}
-
-      {/* Members List */}
-      {members.length > 0 && (
-        <div className="bg-white shadow rounded p-4 mb-6">
-          <p className="mb-3 font-medium">Present: {presentCount} / {members.length}</p>
-          <div className="grid md:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-            {members.map(m => (
-              <label key={m.memberId} className={`p-2 border rounded flex items-center gap-2 cursor-pointer ${attendance[m.memberId] ? "bg-green-100 border-green-400" : ""}`}>
-                <input type="checkbox" checked={!!attendance[m.memberId]} onChange={() => toggleAttendance(m.memberId)} />
-                {m.firstName} {m.lastName}
-              </label>
-            ))}
-          </div>
-          <button onClick={saveAttendance} className="mt-4 w-full bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700">
-            Save Attendance
-          </button>
-        </div>
-      )}
-
       {/* Attendance Records */}
-      <h2 className="text-2xl font-bold mb-4">Attendance Records</h2>
-      {Object.keys(groupedRecords).length === 0 ? (
-        <p>No attendance records yet.</p>
-      ) : (
-        Object.keys(groupedRecords)
-          .sort((a, b) => new Date(b) - new Date(a))
-          .map(date => (
-            <div key={date} className="mb-6">
-              <h3 className="font-semibold mb-2">{date}</h3>
-              <table className="w-full border-collapse border border-gray-300">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="border p-2">Member</th>
-                    <th className="border p-2">Ministry</th>
-                    <th className="border p-2">Activity</th>
-                    <th className="border p-2">Present</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedRecords[date].map(r => (
-                    <tr key={r.memberId + r.activityName}>
-                      <td className="border p-2">{r.memberFirstName} {r.memberLastName}</td>
-                      <td className="border p-2">{r.ministryName}</td>
-                      <td className="border p-2">{r.activityName}</td>
-                      <td className="border p-2 text-center">{r.present ? "✔️" : "❌"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))
-      )}
+      <h2 className="text-2xl font-bold mb-3">General Attendance</h2>
+      {generalRecords.length === 0 && <p>No general attendance recorded.</p>}
+      {generalRecords.map(r => {
+        const { presentMembers, absentMembers } = getMemberNames(r);
+        return (
+          <div key={r.sessionId} className="bg-white shadow rounded p-4 mb-2">
+            <p className="font-semibold">{r.activityName} — {r.date}</p>
+
+            <p className="mt-2 font-medium text-green-700">Present ({presentMembers.length}):</p>
+            {presentMembers.length > 0 ? (
+              <ul className="list-disc list-inside">
+                {presentMembers.map((name, idx) => <li key={name + idx}>{name}</li>)}
+              </ul>
+            ) : <p className="text-sm text-gray-500">No one present</p>}
+
+            <p className="mt-2 font-medium text-red-600">Absent ({absentMembers.length}):</p>
+            {absentMembers.length > 0 ? (
+              <ul className="list-disc list-inside">
+                {absentMembers.map((name, idx) => <li key={name + idx}>{name}</li>)}
+              </ul>
+            ) : <p className="text-sm text-gray-500">No one absent</p>}
+          </div>
+        );
+      })}
+
+      <h2 className="text-2xl font-bold mt-6 mb-3">Specific Attendance</h2>
+      {specificRecords.length === 0 && <p>No specific attendance recorded.</p>}
+      {specificRecords.map(r => {
+        const { presentMembers, absentMembers } = getMemberNames(r);
+        return (
+          <div key={r.sessionId} className="bg-white shadow rounded p-4 mb-2">
+            <p className="font-semibold">{r.activityName} — {r.date}</p>
+
+            <p className="mt-2 font-medium text-green-700">Present ({presentMembers.length}):</p>
+            {presentMembers.length > 0 ? (
+              <ul className="list-disc list-inside">
+                {presentMembers.map((name, idx) => <li key={name + idx}>{name}</li>)}
+              </ul>
+            ) : <p className="text-sm text-gray-500">No one present</p>}
+
+            <p className="mt-2 font-medium text-red-600">Absent ({absentMembers.length}):</p>
+            {absentMembers.length > 0 ? (
+              <ul className="list-disc list-inside">
+                {absentMembers.map((name, idx) => <li key={name + idx}>{name}</li>)}
+              </ul>
+            ) : <p className="text-sm text-gray-500">No one absent</p>}
+          </div>
+        );
+      })}
+
+      {error && <p className="text-red-600 mt-2">{error}</p>}
+      {loading && <p className="mt-2">Loading...</p>}
     </div>
   );
 }
