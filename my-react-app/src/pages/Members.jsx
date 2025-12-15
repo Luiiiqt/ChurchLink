@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { authFetch } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,6 +20,9 @@ export default function Members() {
     address: "",
     ministryId: "",
   });
+
+  const [formErrors, setFormErrors] = useState({}); // store backend validation errors
+  const inputRefs = useRef({}); // refs to inputs for focusing
   const [editing, setEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -52,10 +55,14 @@ export default function Members() {
     fetchMembers();
   }, []);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormErrors({ ...formErrors, [e.target.name]: null }); // clear error for this field on change
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormErrors({});
     try {
       if (editing) {
         await authFetch(
@@ -66,6 +73,7 @@ export default function Members() {
       } else {
         await authFetch("/members", { method: "POST", body: JSON.stringify(form) }, token);
       }
+      // Reset form on success
       setForm({
         memberId: null,
         firstName: "",
@@ -80,8 +88,18 @@ export default function Members() {
       setShowModal(false);
       fetchMembers();
     } catch (err) {
-      console.error(err);
-      setError("Failed to save member");
+      if (err.errors) {
+        setFormErrors(err.errors);
+
+        // Focus the first field with an error
+        const firstErrorField = Object.keys(err.errors)[0];
+        if (firstErrorField && inputRefs.current[firstErrorField]) {
+          inputRefs.current[firstErrorField].focus();
+        }
+      } else {
+        console.error(err);
+        setError("Failed to save member");
+      }
     }
   };
 
@@ -96,6 +114,7 @@ export default function Members() {
       address: member.address,
       ministryId: member.ministryId,
     });
+    setFormErrors({});
     setEditing(true);
     setShowModal(true);
   };
@@ -150,6 +169,7 @@ export default function Members() {
               address: "",
               ministryId: "",
             });
+            setFormErrors({});
             setShowModal(true);
           }}
         >
@@ -213,7 +233,6 @@ export default function Members() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow w-full max-w-md relative">
-            {/* X button */}
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 font-bold text-lg"
@@ -225,72 +244,60 @@ export default function Members() {
               {editing ? "Edit Member" : "Add Member"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-2">
-              <input
-                type="text"
-                name="firstName"
-                placeholder="First Name"
-                value={form.firstName}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded w-full"
-              />
-              <input
-                type="text"
-                name="middleName"
-                placeholder="Middle Name"
-                value={form.middleName}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name"
-                value={form.lastName}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded w-full"
-              />
-              <input
-                type="date"
-                name="dob"
-                value={form.dob}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded w-full"
-              />
-              <select
-                name="gender"
-                value={form.gender}
-                onChange={handleChange}
-                required
-                className="border p-2 rounded w-full"
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-              <input
-                type="text"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                placeholder="Address"
-                className="border p-2 rounded w-full"
-              />
-              <select
-                name="ministryId"
-                value={form.ministryId}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-              >
-                <option value="">Select Ministry</option>
-                {ministries.map((m) => (
-                  <option key={m.ministryId} value={m.ministryId}>
-                    {m.ministryName}
-                  </option>
-                ))}
-              </select>
+              {["firstName", "middleName", "lastName", "dob", "gender", "address", "ministryId"].map((field) => (
+                <div key={field}>
+                  {field === "gender" ? (
+                    <select
+                      name={field}
+                      value={form[field]}
+                      onChange={handleChange}
+                      ref={(el) => (inputRefs.current[field] = el)}
+                      className="border p-2 rounded w-full"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  ) : field === "dob" ? (
+                    <input
+                      type="date"
+                      name={field}
+                      value={form[field]}
+                      onChange={handleChange}
+                      ref={(el) => (inputRefs.current[field] = el)}
+                      className="border p-2 rounded w-full"
+                    />
+                  ) : field === "ministryId" ? (
+                    <select
+                      name={field}
+                      value={form[field]}
+                      onChange={handleChange}
+                      ref={(el) => (inputRefs.current[field] = el)}
+                      className="border p-2 rounded w-full"
+                    >
+                      <option value="">Select Ministry</option>
+                      {ministries.map((m) => (
+                        <option key={m.ministryId} value={m.ministryId}>
+                          {m.ministryName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name={field}
+                      placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                      value={form[field]}
+                      onChange={handleChange}
+                      ref={(el) => (inputRefs.current[field] = el)}
+                      className="border p-2 rounded w-full"
+                    />
+                  )}
+                  {formErrors[field] && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors[field]}</p>
+                  )}
+                </div>
+              ))}
               <div className="flex justify-end space-x-2 mt-4">
                 <button
                   type="button"

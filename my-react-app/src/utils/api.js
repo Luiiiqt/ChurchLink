@@ -6,7 +6,7 @@ export async function authFetch(endpoint, options = {}, token) {
   const url = buildUrl(endpoint);
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
 
-  // FIX: Always get token from localStorage if not passed
+  // Always get token from localStorage if not passed
   if (!token) token = localStorage.getItem("token");
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -20,7 +20,7 @@ export async function authFetch(endpoint, options = {}, token) {
         const renewRes = await fetch(buildUrl("/auth/renew"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: oldToken })
+          body: JSON.stringify({ token: oldToken }),
         });
 
         if (!renewRes.ok) throw new Error("Failed to renew token");
@@ -44,21 +44,24 @@ export async function authFetch(endpoint, options = {}, token) {
     }
   }
 
-  // If response is 204 No Content, return null
+  // 204 No Content → return null
   if (response.status === 204) return null;
 
-  // Attempt to parse JSON, but handle empty body gracefully
   const text = await response.text();
-  if (!text) return null;
+  let data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    // If backend sends validation errors
+    if (data && data.errors) {
+      return Promise.reject({ status: response.status, errors: data.errors });
+    }
+
+    // General backend message
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-    try {
-      const errJson = JSON.parse(text);
-      if (errJson.message) errorMessage = errJson.message;
-    } catch (_) {}
+    if (data && data.message) errorMessage = data.message;
+
     throw new Error(errorMessage);
   }
 
-  return JSON.parse(text);
+  return data;
 }
