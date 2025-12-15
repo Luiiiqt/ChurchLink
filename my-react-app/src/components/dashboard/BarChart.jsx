@@ -10,7 +10,7 @@ const BarChart = ({ data, title, dataKey, labelKey, color }) => {
           <YAxis />
           <Tooltip />
           <Bar dataKey={dataKey} fill="#10B981" />
-        </ReBarChart>
+        </ReBarChart> 
       </ResponsiveContainer>
     </div>
   );
