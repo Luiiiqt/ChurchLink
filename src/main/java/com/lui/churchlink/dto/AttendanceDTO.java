@@ -1,5 +1,6 @@
 package com.lui.churchlink.dto;
 
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -8,26 +9,45 @@ public class AttendanceDTO {
     private int attendanceId;
 
     // Member info
-    private int memberId;
+    @NotNull(message = "Member ID is required")
+    private Integer memberId;
+
+    @NotBlank(message = "First name is required")
+    @Size(max = 50, message = "First name cannot exceed 50 characters")
     private String memberFirstName;
+
+    @Size(max = 50, message = "Middle name cannot exceed 50 characters")
     private String memberMiddleName;
+
+    @NotBlank(message = "Last name is required")
+    @Size(max = 50, message = "Last name cannot exceed 50 characters")
     private String memberLastName;
+
+    @Past(message = "Date of birth must be in the past")
     private LocalDate memberDob;
+
+    @NotBlank(message = "Gender is required")
     private String memberGender;
+
+    @Size(max = 100, message = "Address cannot exceed 100 characters")
     private String memberAddress;
 
     // Ministry info
     private Integer ministryId;
+
+    @Size(max = 50, message = "Ministry name cannot exceed 50 characters")
     private String ministryName;
 
     // Activity info (nullable for general attendance)
     private Integer activityId;
+
+    @Size(max = 100, message = "Activity name cannot exceed 100 characters")
     private String activityName;
+
     private LocalDate activityDate;
     private LocalTime activityTime;
     private String activityPlace;
 
-    // Is general attendance (true if activity is null)
     private boolean general;
 
     public AttendanceDTO() {}

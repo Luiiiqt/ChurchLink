@@ -2,6 +2,7 @@ package com.lui.churchlink.controller.api;
 
 import com.lui.churchlink.dto.MinistryDTO;
 import com.lui.churchlink.service.MinistryService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public class MinistryController {
     }
 
     @PostMapping
-    public MinistryDTO create(@RequestBody MinistryDTO dto) {
+    public MinistryDTO create(@Valid @RequestBody MinistryDTO dto) {
         return ministryService.createMinistry(dto);
     }
 
@@ -30,3 +31,4 @@ public class MinistryController {
         ministryService.deleteMinistry(id);
     }
 }
+

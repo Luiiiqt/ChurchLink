@@ -1,14 +1,22 @@
 package com.lui.churchlink.dto;
 
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
 public class AttendanceSessionDTO {
 
     private int sessionId;
-    private Integer activityId; // null → general
-    private String activityName; // for general, can be custom input
+    private Integer activityId;
+
+    @Size(max = 100, message = "Activity name cannot exceed 100 characters")
+    private String activityName;
+
+    @NotNull(message = "Date is required")
     private LocalDate date;
-    private String[] present; // member IDs
+
+    @NotEmpty(message = "Present member list cannot be empty")
+    private String[] present;
+
     private String[] absent;
 
     public AttendanceSessionDTO() {}

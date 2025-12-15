@@ -45,15 +45,10 @@ public class ApiAuthController {
 
     @PostMapping("/renew")
     public AuthResponse renew(@RequestBody String oldToken) {
-
         String username = jwtTokenService.extractUsernameAllowExpired(oldToken);
-
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-
         String newToken = jwtTokenService.generateToken(userDetails);
-
         Long expiresAt = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L;
-
         return new AuthResponse(newToken, username, expiresAt);
     }
 
@@ -64,9 +59,7 @@ public class ApiAuthController {
 
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
         String token = jwtTokenService.generateToken(userDetails);
-
         Long expiresAt = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L;
-
         return new AuthResponse(token, username, expiresAt);
     }
 }

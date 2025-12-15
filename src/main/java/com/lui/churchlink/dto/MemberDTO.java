@@ -1,15 +1,27 @@
 package com.lui.churchlink.dto;
 
 import com.lui.churchlink.model.Member;
+import jakarta.validation.constraints.NotBlank;
 
 public class MemberDTO {
 
     private Integer memberId;
+
+    @NotBlank(message = "First name is required")
     private String firstName;
+
     private String middleName;
+
+    @NotBlank(message = "Last name is required")
     private String lastName;
-    private String dob; // String for JSON
+
+    @NotBlank(message = "Date of birth is required")
+    private String dob; // or use LocalDate with @Past
+
+    @NotBlank(message = "Gender is required")
     private String gender;
+
+    @NotBlank(message = "Address is required")
     private String address;
 
     private Integer ministryId;

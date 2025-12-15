@@ -3,6 +3,10 @@ package com.lui.churchlink.controller.api;
 import com.lui.churchlink.dto.AttendanceSessionDTO;
 import com.lui.churchlink.service.AttendanceSessionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -18,55 +22,41 @@ public class AttendanceSessionController {
         this.service = service;
     }
 
-    // ---------------------------
-    // Save session (general or specific)
-    // ---------------------------
     @PostMapping("/session")
-    public void saveAttendanceSession(@RequestBody AttendanceSessionRequest request) throws JsonProcessingException {
-        // If general attendance, provide default activity name if none
+    public void saveAttendanceSession(@Valid @RequestBody AttendanceSessionRequest request) throws JsonProcessingException {
         String activityName = request.getActivityName();
         if (request.getActivityId() == null && (activityName == null || activityName.isEmpty())) {
             activityName = "Sunday Service";
         }
-        service.saveAttendanceSession(
-                request.getActivityId(),
-                activityName,
-                request.getDate(),
-                request.getPresent()
-        );
+        service.saveAttendanceSession(request.getActivityId(), activityName, request.getDate(), request.getPresent());
     }
 
-    // ---------------------------
-    // Get all sessions
-    // ---------------------------
     @GetMapping("/sessions")
     public List<AttendanceSessionDTO> getAllSessions() {
         return service.getAllSessions();
     }
 
-    // ---------------------------
-    // General sessions only
-    // ---------------------------
     @GetMapping("/sessions/general")
     public List<AttendanceSessionDTO> getGeneralSessions() {
         return service.getGeneralSessions();
     }
 
-    // ---------------------------
-    // Specific sessions only
-    // ---------------------------
     @GetMapping("/sessions/specific")
     public List<AttendanceSessionDTO> getSpecificSessions() {
         return service.getSpecificSessions();
     }
 
-    // ---------------------------
     // DTO for POST
-    // ---------------------------
     public static class AttendanceSessionRequest {
-        private Integer activityId;   // null → general
-        private String activityName;  // optional for general
-        private LocalDate date;       // optional for general
+        private Integer activityId;
+
+        @Size(max = 100, message = "Activity name cannot exceed 100 characters")
+        private String activityName;
+
+        @NotNull(message = "Date is required")
+        private LocalDate date;
+
+        @NotEmpty(message = "Present member list cannot be empty")
         private List<Integer> present;
 
         public Integer getActivityId() { return activityId; }

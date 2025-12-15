@@ -2,6 +2,7 @@ package com.lui.churchlink.controller.api;
 
 import com.lui.churchlink.dto.MemberDTO;
 import com.lui.churchlink.service.MemberService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,12 +23,12 @@ public class MemberController {
     }
 
     @PostMapping
-    public MemberDTO create(@RequestBody MemberDTO dto) {
+    public MemberDTO create(@Valid @RequestBody MemberDTO dto) {
         return memberService.saveMember(dto);
     }
 
     @PutMapping("/{id}")
-    public MemberDTO update(@PathVariable int id, @RequestBody MemberDTO dto) {
+    public MemberDTO update(@PathVariable int id, @Valid @RequestBody MemberDTO dto) {
         return memberService.updateMember(id, dto);
     }
 
@@ -36,3 +37,4 @@ public class MemberController {
         memberService.deleteMember(id);
     }
 }
+

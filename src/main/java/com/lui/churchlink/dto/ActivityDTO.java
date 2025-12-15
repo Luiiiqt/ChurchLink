@@ -1,14 +1,29 @@
 package com.lui.churchlink.dto;
 
+import jakarta.validation.constraints.*;
+
 public class ActivityDTO {
     private Integer activityId;
+
+    @NotBlank(message = "Activity name is required")
+    @Size(max = 100, message = "Activity name cannot exceed 100 characters")
     private String activity;
-    private String eventType; // for general activities
-    private String date;      // yyyy-MM-dd
-    private String time;      // HH:mm
+
+    @Size(max = 50, message = "Event type cannot exceed 50 characters")
+    private String eventType;
+
+    // Date and time as String
+    private String date;
+    private String time;
+
+    @Size(max = 100, message = "Place cannot exceed 100 characters")
     private String place;
+
     private Boolean isGeneral;
-    private Integer ministryId; // optional for general
+
+    private Integer ministryId;
+
+    @Size(max = 50, message = "Status cannot exceed 50 characters")
     private String status;
 
     public ActivityDTO() {}
