@@ -101,7 +101,6 @@ export default function Members() {
       } else {
         await authFetch("/members", { method: "POST", body: JSON.stringify(form) }, token);
       }
-
       setShowModal(false);
       setEditing(false);
       resetForm();
