@@ -3,12 +3,104 @@ import { authFetch } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
+const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6'];
+
+const MetricCard = ({ title, value, color, icon }) => (
+  <div className={`bg-gradient-to-br from-${color}-500 to-${color}-600 rounded-2xl shadow-xl p-6 text-white transform hover:scale-105 transition-all duration-200`}>
+    <div className="flex items-center justify-between mb-4">
+      <div className={`w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center`}>
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {icon}
+        </svg>
+      </div>
+    </div>
+    <p className="text-white/80 text-sm font-medium mb-1">{title}</p>
+    <p className="text-4xl font-bold">{value}</p>
+  </div>
+);
+
+const IconBox = ({ color, children }) => (
+  <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center shadow-lg`}>
+    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {children}
+    </svg>
+  </div>
+);
+
+const ActivityBox = ({ title, activities, color, icon, emptyMessage }) => (
+  <div className="bg-white rounded-2xl shadow-xl p-6 border border-emerald-100/50">
+    <h3 className={`text-lg font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent flex items-center gap-2 mb-4`}>
+      <div className={`w-8 h-8 bg-gradient-to-br ${color} rounded-lg flex items-center justify-center`}>
+        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {icon}
+        </svg>
+      </div>
+      {title}
+    </h3>
+    <div className="space-y-2">
+      {activities.length === 0 ? (
+        <p className="text-gray-400 text-sm text-center py-4">{emptyMessage}</p>
+      ) : (
+        activities.slice(0, 5).map((activity, idx) => (
+          <div key={idx} className="p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+            <p className="text-sm font-semibold text-gray-800 truncate">
+              {activity.activity || activity.activityName}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {new Date(activity.date || activity.activityDate).toLocaleDateString()}
+            </p>
+          </div>
+        ))
+      )}
+    </div>
+    {activities.length > 5 && (
+      <p className="text-xs text-gray-500 text-center mt-3">
+        +{activities.length - 5} more
+      </p>
+    )}
+  </div>
+);
+
+const EmptyState = ({ message }) => (
+  <div className="flex flex-col items-center justify-center py-12">
+    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+      </svg>
+    </div>
+    <p className="text-gray-500 font-medium">{message}</p>
+  </div>
+);
+
+const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  if (percent < 0.05) return null;
+
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="white" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      className="font-bold text-sm"
+    >
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
+
 export default function Dashboard() {
   const { token } = useAuth();
   const [members, setMembers] = useState([]);
   const [ministries, setMinistries] = useState([]);
   const [activities, setActivities] = useState([]);
   const [attendances, setAttendances] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -34,6 +126,9 @@ export default function Dashboard() {
       setMinistries(ministriesData || []);
       setActivities(activitiesData || []);
       setAttendances(attendancesData || []);
+      
+      // Generate recent activity from the data
+      generateRecentActivity(membersData, activitiesData, attendancesData);
     } catch (err) {
       console.error(err);
       setError("Failed to load dashboard data");
@@ -48,6 +143,99 @@ export default function Dashboard() {
       fetchDashboard();
     }
   }, [token, fetchDashboard]);
+
+  const generateRecentActivity = (membersData, activitiesData, attendancesData) => {
+    const activities = [];
+    
+    // Add recently added members (non-archived)
+    const recentMembers = [...(membersData || [])]
+      .filter(m => !m.archived && m.createdAt)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 2);
+    
+    recentMembers.forEach(member => {
+      activities.push({
+        type: 'member',
+        icon: 'user',
+        color: 'from-green-400 to-emerald-500',
+        title: 'New member registered',
+        description: `${member.firstName} ${member.lastName} joined the church`,
+        time: getTimeAgo(member.createdAt),
+        iconBg: 'bg-green-100'
+      });
+    });
+    
+    // Add archived members
+    const archivedMembers = [...(membersData || [])]
+      .filter(m => m.archived && m.archivedAt)
+      .sort((a, b) => new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0))
+      .slice(0, 2);
+    
+    archivedMembers.forEach(member => {
+      activities.push({
+        type: 'archived',
+        icon: 'archive',
+        color: 'from-orange-400 to-red-500',
+        title: 'Member archived',
+        description: `${member.firstName} ${member.lastName} was archived`,
+        time: getTimeAgo(member.archivedAt),
+        iconBg: 'bg-orange-100'
+      });
+    });
+    
+    // Add recent activities
+    const recentActivitiesData = [...(activitiesData || [])]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 1);
+    
+    recentActivitiesData.forEach(activity => {
+      activities.push({
+        type: 'activity',
+        icon: 'calendar',
+        color: 'from-blue-400 to-cyan-500',
+        title: 'New activity scheduled',
+        description: `${activity.activity || activity.activityName} on ${new Date(activity.date).toLocaleDateString()}`,
+        time: getTimeAgo(activity.createdAt || activity.date),
+        iconBg: 'bg-blue-100'
+      });
+    });
+    
+    // Add recent attendance
+    const recentAttendances = [...(attendancesData || [])]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 1);
+    
+    recentAttendances.forEach(attendance => {
+      const presentCount = Array.isArray(attendance.present) ? attendance.present.length : 0;
+      activities.push({
+        type: 'attendance',
+        icon: 'check',
+        color: 'from-purple-400 to-pink-500',
+        title: 'Attendance recorded',
+        description: `${presentCount} members present`,
+        time: getTimeAgo(attendance.date),
+        iconBg: 'bg-purple-100'
+      });
+    });
+    
+    // Take the most recent 6
+    const sortedActivities = activities.slice(0, 6);
+    
+    setRecentActivity(sortedActivities);
+  };
+
+  const getTimeAgo = (date) => {
+    if (!date) return 'Just now';
+    const now = new Date();
+    const then = new Date(date);
+    const diffInSeconds = Math.floor((now - then) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return then.toLocaleDateString();
+  };
 
   const countMembersByMinistry = (ministryId) =>
     members.filter((m) => m.ministryId === ministryId).length;
@@ -336,8 +524,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Charts Row - Pie Chart and Line Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Charts and Recent Activity Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Ministry Distribution Pie Chart */}
           <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-emerald-100/50">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3 mb-6">
@@ -378,276 +566,104 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Attendance Trend Line Chart */}
-          <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-emerald-100/50">
+          {/* Recent Activity Section */}
+          <div className="lg:col-span-2 bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-emerald-100/50">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3 mb-6">
-              <IconBox color="from-orange-500 to-red-500">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+              <IconBox color="from-blue-500 to-cyan-500">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </IconBox>
-              Attendance Trend (Last 6 Months)
+              Recent Activity
             </h2>
-            <div className="mb-4 text-sm text-gray-600">
-              <p>Average attendance per session by month</p>
-            </div>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={attendanceTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fill: '#6b7280' }} />
-                <YAxis tick={{ fill: '#6b7280' }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
-                  formatter={(value, name, props) => {
-                    if (name === 'attendance') {
-                      return [
-                        <div key="tooltip">
-                          <div>Avg Attendance: {value}</div>
-                          <div className="text-xs text-gray-500">Sessions: {props.payload.sessions}</div>
-                          <div className="text-xs text-gray-500">Total Present: {props.payload.totalPresent}</div>
-                        </div>,
-                        ''
-                      ];
-                    }
-                    return [value, name];
-                  }}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="attendance" 
-                  stroke="#f97316" 
-                  strokeWidth={3}
-                  dot={{ fill: '#f97316', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8 }}
-                  name="Avg Attendance"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* All Ministries Section */}
-        <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-emerald-100/50">
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <IconBox color="from-teal-500 to-cyan-500">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </IconBox>
-              <h2 className="text-2xl font-bold text-gray-800">All Ministries</h2>
-            </div>
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Ministries</p>
-                <div className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  {ministries.length}
-                </div>
-              </div>
-              <div className="h-12 w-px bg-gray-300"></div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total Members</p>
-                <div className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                  {members.length}
-                </div>
-              </div>
-            </div>
-          </div>
-          {ministries.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <p className="text-gray-500">No ministries found</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {ministries.map((min, index) => {
-                const memberCount = countMembersByMinistry(min.ministryId);
-                const colorIndex = index % COLORS.length;
-                const percentage = calculatePercentage(memberCount, members.length);
-                
-                return (
-                  <div key={min.ministryId} className="group relative">
-                    <div className="bg-white rounded-2xl p-5 hover:shadow-xl transition-all duration-300 border-2 border-gray-100 hover:border-emerald-300 cursor-pointer h-full flex flex-col items-center">
-                      <div 
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 mb-4"
-                        style={{ backgroundColor: COLORS[colorIndex] }}
-                      >
-                        {min.ministryName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="text-center flex-1 flex flex-col justify-between w-full">
-                        <h3 className="font-bold text-gray-800 text-sm mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2 min-h-[2.5rem]">
-                          {min.ministryName}
-                        </h3>
-                        <div>
-                          <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-1">
-                            {memberCount}
-                          </div>
-                          <p className="text-xs text-gray-500 font-medium">members</p>
-                          <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5">
-                            <div 
-                              className="h-1.5 rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${percentage}%`,
-                                backgroundColor: COLORS[colorIndex]
-                              }}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1 font-medium">{percentage}%</p>
-                        </div>
-                      </div>
+            {recentActivity.length === 0 ? (
+              <EmptyState message="No recent activity" />
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                    <div className={`flex-shrink-0 w-12 h-12 ${activity.iconBg} rounded-full flex items-center justify-center`}>
+                      {activity.icon === 'user' && (
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      )}
+                      {activity.icon === 'calendar' && (
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                      {activity.icon === 'check' && (
+                        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      {activity.icon === 'archive' && (
+                        <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{activity.title}</p>
+                      <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                      <p className="text-xs text-gray-400 mt-2">{activity.time}</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const COLORS = ['#10b981', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#84cc16'];
-
-const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="white" 
-      textAnchor={x > cx ? 'start' : 'end'} 
-      dominantBaseline="central"
-      className="font-bold text-sm"
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
-
-function MetricCard({ title, value, color, icon }) {
-  const colors = {
-    emerald: 'from-emerald-500 to-emerald-600',
-    teal: 'from-teal-500 to-teal-600',
-    cyan: 'from-cyan-500 to-cyan-600',
-    green: 'from-green-500 to-green-600'
-  };
-  return (
-    <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group transform hover:-translate-y-1">
-      <div className={`bg-gradient-to-br ${colors[color]} p-6 relative`}>
-        <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="flex items-center justify-between mb-2 relative z-10">
-          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
-          </div>
-        </div>
-        <div className="text-white relative z-10">
-          <div className="text-4xl font-bold mb-1">{value}</div>
-          <div className="text-sm font-medium text-white/90">{title}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function IconBox({ children, color }) {
-  return (
-    <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center shadow-lg`}>
-      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">{children}</svg>
-    </div>
-  );
-}
-
-function ActivityBox({ title, activities, color, icon, emptyMessage }) {
-  return (
-    <div className="bg-white rounded-3xl shadow-xl p-4 border border-gray-100/50 hover:shadow-2xl transition-shadow duration-300">
-      <div className="flex items-center gap-2 mb-4">
-        <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center shadow-lg`}>
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">{icon}</svg>
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-          <p className="text-xs text-gray-600">{activities.length} {activities.length === 1 ? 'activity' : 'activities'}</p>
-        </div>
-      </div>
-
-      {activities.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <p className="text-gray-500 text-sm">{emptyMessage}</p>
-        </div>
-      ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-          {activities.map((activity) => (
-            <div key={activity.activityId} className="group bg-gradient-to-br from-gray-50 to-green-50 rounded-xl p-4 hover:shadow-lg transition-all duration-300 border-2 border-gray-200 hover:border-green-300 cursor-pointer">
-              <h3 className="font-bold text-gray-800 text-sm group-hover:text-green-700 transition-colors mb-2 leading-snug">
-                {activity.activity || activity.activityName || activity.name}
-              </h3>
-              <div className="flex flex-col gap-1.5 text-xs">
-                {activity.date && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium">
-                      {new Date(activity.date).toLocaleDateString('en-US', { 
-                        weekday: 'short',
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                )}
-                {activity.time && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">{activity.time}</span>
-                  </div>
-                )}
-                {activity.location && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-medium">{activity.location}</span>
-                  </div>
-                )}
+                ))}
               </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
-}
 
-function EmptyState({ message }) {
-  return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-        </svg>
+        {/* Attendance Trend Line Chart - Full Width */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 border border-emerald-100/50 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3 mb-6">
+            <IconBox color="from-orange-500 to-red-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </IconBox>
+            Attendance Trend (Last 6 Months)
+          </h2>
+          <div className="mb-4 text-sm text-gray-600">
+            <p>Average attendance per session by month</p>
+          </div>
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={attendanceTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" tick={{ fill: '#6b7280' }} />
+              <YAxis tick={{ fill: '#6b7280' }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+                formatter={(value, name, props) => {
+                  if (name === 'attendance') {
+                    return [
+                      <div key="tooltip">
+                        <div>Avg Attendance: {value}</div>
+                        <div className="text-xs text-gray-500">Sessions: {props.payload.sessions}</div>
+                      </div>,
+                      ''
+                    ];
+                  }
+                  return [value, name];
+                }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="attendance" 
+                stroke="#10b981" 
+                strokeWidth={3}
+                dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                activeDot={{ r: 8 }}
+                name="Avg Attendance"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-      <p className="text-gray-500">{message}</p>
     </div>
   );
 }

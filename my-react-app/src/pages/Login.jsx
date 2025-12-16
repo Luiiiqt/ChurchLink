@@ -10,6 +10,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -23,8 +24,11 @@ const Login = () => {
     setLoading(true);
     try {
       await loginRequest(username.trim(), password);
-      // Navigate to root (dashboard) after successful login
-      navigate("/", { replace: true });
+      setLoginSuccess(true);
+      // Add slight delay to show success animation
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 1500);
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -34,6 +38,30 @@ const Login = () => {
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
+      {/* Login Success Overlay */}
+      {loginSuccess && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center animate-fadeIn">
+          <div className="relative">
+            {/* Success Checkmark */}
+            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center animate-successBounce shadow-2xl">
+              <svg className="w-12 h-12 text-white animate-checkmark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            {/* Pulse Ring */}
+            <div className="absolute inset-0 rounded-full bg-green-400 animate-successPulse"></div>
+          </div>
+          <h3 className="mt-8 text-2xl font-bold text-gray-900 animate-slideUp">Login Successful!</h3>
+          <p className="mt-2 text-gray-600 animate-fadeIn" style={{ animationDelay: "0.2s" }}>Redirecting to dashboard...</p>
+          {/* Loading Dots */}
+          <div className="flex gap-2 mt-6">
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-loadingDot1"></div>
+            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-loadingDot2"></div>
+            <div className="w-3 h-3 bg-teal-400 rounded-full animate-loadingDot3"></div>
+          </div>
+        </div>
+      )}
+
       {/* Top Wave */}
       <div className="absolute top-0 left-0 w-full overflow-hidden leading-none animate-waveSlideDown">
         <svg className="relative block w-full h-32 animate-wavePulse" viewBox="0 0 1200 120" preserveAspectRatio="none">
@@ -137,6 +165,12 @@ const Login = () => {
         @keyframes particle3 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.3;}50%{transform:translate(25px,25px) scale(1.1);opacity:0.5;} }
         @keyframes particle4 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.4;}50%{transform:translate(-20px,-30px) scale(1.2);opacity:0.6;} }
         @keyframes particle5 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.3;}50%{transform:translate(30px,-25px) scale(1.4);opacity:0.7;} }
+        @keyframes successBounce { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes checkmark { 0% { stroke-dasharray: 0, 100; } 100% { stroke-dasharray: 100, 100; } }
+        @keyframes successPulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
+        @keyframes loadingDot1 { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+        @keyframes loadingDot2 { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+        @keyframes loadingDot3 { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
 
         .animate-slideRight { animation: slideRight 0.8s ease-out; }
         .animate-slideUp { animation: slideUp 0.8s ease-out; }
@@ -152,6 +186,12 @@ const Login = () => {
         .animate-particle3 { animation: particle3 7s ease-in-out infinite; }
         .animate-particle4 { animation: particle4 9s ease-in-out infinite; }
         .animate-particle5 { animation: particle5 7.5s ease-in-out infinite; }
+        .animate-successBounce { animation: successBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .animate-checkmark { animation: checkmark 0.5s ease-in-out 0.3s both; stroke-dasharray: 0, 100; }
+        .animate-successPulse { animation: successPulse 1.5s ease-out infinite; }
+        .animate-loadingDot1 { animation: loadingDot1 1.2s ease-in-out infinite; }
+        .animate-loadingDot2 { animation: loadingDot2 1.2s ease-in-out infinite 0.2s; }
+        .animate-loadingDot3 { animation: loadingDot3 1.2s ease-in-out infinite 0.4s; }
       `}</style>
     </div>
   );

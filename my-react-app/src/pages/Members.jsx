@@ -6,15 +6,20 @@ export default function Members() {
   const { token } = useAuth();
 
   const [members, setMembers] = useState([]);
+  const [archivedMembers, setArchivedMembers] = useState([]);
   const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [search, setSearch] = useState("");
-  const [selectedMinistry, setSelectedMinistry] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const membersPerPage = 10;
 
   const [form, setForm] = useState({
     memberId: null,
@@ -37,11 +42,16 @@ export default function Members() {
     setError(null);
     try {
       const data = await authFetch("/members", {}, token);
-      setMembers(data || []);
+      // Separate active and archived members
+      const active = (data || []).filter(m => !m.isArchived);
+      const archived = (data || []).filter(m => m.isArchived);
+      setMembers(active);
+      setArchivedMembers(archived);
     } catch (err) {
       console.error(err);
       setError("Cannot load members");
       setMembers([]);
+      setArchivedMembers([]);
     } finally {
       setLoading(false);
     }
@@ -105,6 +115,7 @@ export default function Members() {
       setEditing(false);
       resetForm();
       fetchMembers();
+      setCurrentPage(1);
     } catch (err) {
       if (err.errors) {
         setFormErrors(err.errors);
@@ -149,46 +160,75 @@ export default function Members() {
     setShowModal(true);
   };
 
+  const handleArchive = async (id) => {
+    if (!window.confirm("Are you sure you want to archive this member?")) return;
+    try {
+      await authFetch(`/members/${id}/archive`, { method: "PUT" }, token);
+      fetchMembers();
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to archive member");
+    }
+  };
+
+  const handleRecover = async (id) => {
+    if (!window.confirm("Are you sure you want to recover this member?")) return;
+    try {
+      await authFetch(`/members/${id}/recover`, { method: "PUT" }, token);
+      fetchMembers();
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to recover member");
+    }
+  };
+
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this member?")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this member? This action cannot be undone.")) return;
     try {
       await authFetch(`/members/${id}`, { method: "DELETE" }, token);
       fetchMembers();
+      setCurrentPage(1);
     } catch (err) {
       console.error(err);
       setError("Failed to delete member");
     }
   };
 
-  /* ================= FILTER ================= */
+  /* ================= FILTER & PAGINATION ================= */
 
-  const filteredMembers = members.filter((m) => {
+  const dataToDisplay = showArchived ? archivedMembers : members;
+
+  const filteredMembers = dataToDisplay.filter((m) => {
     const text = search.toLowerCase();
     const ministryName =
       ministries.find((x) => x.ministryId === m.ministryId)?.ministryName || "";
 
-    const matchesSearch =
+    return (
       m.firstName.toLowerCase().includes(text) ||
       m.middleName?.toLowerCase().includes(text) ||
       m.lastName.toLowerCase().includes(text) ||
       m.address?.toLowerCase().includes(text) ||
       m.gender?.toLowerCase().includes(text) ||
-      ministryName.toLowerCase().includes(text);
-
-    const matchesMinistry = selectedMinistry
-      ? String(m.ministryId) === String(selectedMinistry)
-      : true;
-
-    return matchesSearch && matchesMinistry;
+      ministryName.toLowerCase().includes(text)
+    );
   });
 
-  const ministryColors = [
-    { bg: "bg-emerald-500", hover: "hover:bg-emerald-600", ring: "ring-emerald-500" },
-    { bg: "bg-green-500", hover: "hover:bg-green-600", ring: "ring-green-500" },
-    { bg: "bg-teal-500", hover: "hover:bg-teal-600", ring: "ring-teal-500" },
-    { bg: "bg-lime-500", hover: "hover:bg-lime-600", ring: "ring-lime-500" },
-    { bg: "bg-cyan-500", hover: "hover:bg-cyan-600", ring: "ring-cyan-500" },
-  ];
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMembers.length / membersPerPage);
+  const indexOfLastMember = currentPage * membersPerPage;
+  const indexOfFirstMember = indexOfLastMember - membersPerPage;
+  const currentMembers = filteredMembers.slice(indexOfFirstMember, indexOfLastMember);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // Reset to page 1 when switching between active/archived
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showArchived]);
 
   /* ================= UI ================= */
 
@@ -197,62 +237,46 @@ export default function Members() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Members Management
-          </h1>
-          <button
-            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-            onClick={() => {
-              resetForm();
-              setEditing(false);
-              setShowModal(true);
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Member
-          </button>
-        </div>
-
-        {/* Ministry Filter Cards */}
-        <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <button
-            className={`p-4 rounded-xl shadow-md transition-all duration-200 ${
-              selectedMinistry === null
-                ? "bg-gradient-to-br from-gray-600 to-gray-700 text-white ring-2 ring-gray-600 ring-offset-2"
-                : "bg-white hover:shadow-lg"
-            }`}
-            onClick={() => setSelectedMinistry(null)}
-          >
-            <div className="text-center">
-              <div className={`text-lg font-bold ${selectedMinistry === null ? "text-white" : "text-gray-800"}`}>
-                All Members
-              </div>
-            </div>
-          </button>
-
-          {ministries.map((ministry, index) => {
-            const color = ministryColors[index % ministryColors.length];
-            const isSelected = String(selectedMinistry) === String(ministry.ministryId);
-            return (
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">
+              {showArchived ? "Archived Members" : "Members Management"}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {showArchived 
+                ? `${archivedMembers.length} archived members` 
+                : `${members.length} active members`}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              className={`px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 ${
+                showArchived
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                  : "bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700"
+              }`}
+              onClick={() => setShowArchived(!showArchived)}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              {showArchived ? "View Active Members" : "View Archive"}
+            </button>
+            {!showArchived && (
               <button
-                key={ministry.ministryId}
-                className={`p-4 rounded-xl shadow-md transition-all duration-200 ${
-                  isSelected
-                    ? `${color.bg} text-white ring-2 ${color.ring} ring-offset-2`
-                    : `bg-white ${color.hover}`
-                }`}
-                onClick={() => setSelectedMinistry(ministry.ministryId)}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                onClick={() => {
+                  resetForm();
+                  setEditing(false);
+                  setShowModal(true);
+                }}
               >
-                <div className="text-center">
-                  <div className={`text-lg font-bold ${isSelected ? "text-white" : "text-gray-800"}`}>
-                    {ministry.ministryName}
-                  </div>
-                </div>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Member
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -265,7 +289,10 @@ export default function Members() {
               type="text"
               placeholder="Search members by name, ministry, or address..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
             />
           </div>
@@ -284,86 +311,153 @@ export default function Members() {
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
               <p className="text-gray-600">Loading members...</p>
             </div>
-          ) : filteredMembers.length === 0 ? (
+          ) : currentMembers.length === 0 ? (
             <div className="p-12 text-center">
               <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <p className="text-gray-500 text-lg">No members found</p>
+              <p className="text-gray-500 text-lg">
+                {showArchived ? "No archived members found" : "No members found"}
+              </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Full Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      DOB
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Gender
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Address
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Ministry
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMembers.map((member) => (
-                    <tr key={member.memberId} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {`${member.firstName} ${member.middleName || ""} ${member.lastName}`}
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Full Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        DOB
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Gender
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Ministry
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentMembers.map((member) => (
+                      <tr key={member.memberId} className="hover:bg-gray-50 transition-colors duration-150">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
+                              {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {`${member.firstName} ${member.middleName || ""} ${member.lastName}`}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {member.dob}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {member.gender}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {member.address}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800">
-                          {ministries.find((min) => min.ministryId === member.ministryId)?.ministryName || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {member.dob}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {member.gender}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {member.address}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800">
+                            {ministries.find((min) => min.ministryId === member.ministryId)?.ministryName || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                          {showArchived ? (
+                            <>
+                              <button
+                                className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                onClick={() => handleRecover(member.memberId)}
+                              >
+                                Recover
+                              </button>
+                              <button
+                                className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                onClick={() => handleDelete(member.memberId)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="px-3 py-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors"
+                                onClick={() => handleEdit(member)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                onClick={() => handleArchive(member.memberId)}
+                              >
+                                Archive
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700">
+                      Showing <span className="font-semibold">{indexOfFirstMember + 1}</span> to{" "}
+                      <span className="font-semibold">
+                        {Math.min(indexOfLastMember, filteredMembers.length)}
+                      </span>{" "}
+                      of <span className="font-semibold">{filteredMembers.length}</span> members
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                         <button
-                          className="px-3 py-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors"
-                          onClick={() => handleEdit(member)}
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-4 py-2 rounded-lg transition-all ${
+                            currentPage === page
+                              ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white"
+                              : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                          }`}
                         >
-                          Edit
+                          {page}
                         </button>
-                        <button
-                          className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                          onClick={() => handleDelete(member.memberId)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      ))}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

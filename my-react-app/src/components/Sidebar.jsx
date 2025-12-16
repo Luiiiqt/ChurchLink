@@ -7,13 +7,13 @@ function Sidebar({ status, currentPage, setCurrentPage, onLogout }) {
   const menuItems = [
     { icon: "🏠", text: "Dashboard", page: "dashboard", path: "/" },
     { icon: "👥", text: "Members", page: "members", path: "/members" },
-    { icon: "📋", text: "Attendance", page: "attendance", path: "/attendance" }, // Combined page
+    { icon: "📋", text: "Attendance", page: "attendance", path: "/attendance" },
     { icon: "📂", text: "Ministries", page: "ministries", path: "/ministries" },
     { icon: "🎯", text: "Activities", page: "activities", path: "/activities" },
   ];
 
   return (
-    <aside className="bg-gradient-to-b from-green-900 via-emerald-800 to-green-800 text-white min-h-screen p-6 flex flex-col shadow-2xl w-64">
+    <aside className="fixed left-0 top-0 bg-gradient-to-b from-green-900 via-emerald-800 to-green-800 text-white h-screen p-6 flex flex-col shadow-2xl w-64 overflow-y-auto">
       <div className="mb-10">
         <h2 className="text-3xl font-extrabold bg-gradient-to-r from-green-300 via-emerald-300 to-green-400 bg-clip-text text-transparent select-none">
           ChurchLink
@@ -63,7 +63,7 @@ function Sidebar({ status, currentPage, setCurrentPage, onLogout }) {
 
         <button
           onClick={onLogout}
-          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl font-semibold"
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl font-semibold transition-colors"
         >
           Logout
         </button>
