@@ -50,13 +50,17 @@ public class AttendanceService {
     }
 
     // ------------------------
-    // Specific activity attendance
-    // ------------------------
+// Specific activity attendance
+// ------------------------
     public List<MemberAttendanceResponse> getSpecificAttendance(Integer activityId) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
 
-        List<Member> members = memberRepository.findByMinistry_MinistryId(activity.getMinistry().getMinistryId());
+        // Fetch only non-archived members of the activity's ministry
+        List<Member> members = memberRepository.findByMinistry_MinistryIdAndArchivedFalse(
+                activity.getMinistry().getMinistryId()
+        );
+
         List<Attendance> attendances = attendanceRepository.findByActivity_ActivityId(activityId);
 
         return members.stream()
@@ -69,6 +73,7 @@ public class AttendanceService {
                 ))
                 .collect(Collectors.toList());
     }
+
 
     // ------------------------
 // Save attendance (automatic activity completion)

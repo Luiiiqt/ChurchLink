@@ -7,6 +7,9 @@ import java.util.List;
 
 public interface MemberRepository extends JpaRepository<Member, Integer> {
 
-    // Fetch all members by ministry ID
-    List<Member> findByMinistry_MinistryId(Integer ministryId);
+    // Fetch all non-archived members
+    List<Member> findByArchivedFalse();
+
+    // Fetch all non-archived members by ministry
+    List<Member> findByMinistry_MinistryIdAndArchivedFalse(Integer ministryId);
 }

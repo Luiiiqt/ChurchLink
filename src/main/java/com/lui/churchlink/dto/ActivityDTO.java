@@ -9,13 +9,18 @@ public class ActivityDTO {
     @Size(max = 100, message = "Activity name cannot exceed 100 characters")
     private String activity;
 
+    @NotBlank(message = "Event Type is required")
     @Size(max = 50, message = "Event type cannot exceed 50 characters")
     private String eventType;
 
     // Date and time as String
+    @NotBlank(message = "Date is required")
     private String date;
+
+    @NotBlank(message = "Time is required")
     private String time;
 
+    @NotBlank(message = "Place is required")
     @Size(max = 100, message = "Place cannot exceed 100 characters")
     private String place;
 

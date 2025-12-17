@@ -1,8 +1,7 @@
 package com.lui.churchlink.service;
 
 import com.lui.churchlink.dto.MemberDTO;
-import com.lui.churchlink.model.Member;
-import com.lui.churchlink.model.Ministry;
+import com.lui.churchlink.model.*;
 import com.lui.churchlink.repository.MemberRepository;
 import com.lui.churchlink.repository.MinistryRepository;
 import org.springframework.stereotype.Service;
@@ -27,53 +26,74 @@ public class MemberService {
     public List<MemberDTO> getAllMembers() {
         return memberRepository.findAll()
                 .stream()
-                .map(MemberDTO::new) // converts Member → MemberDTO including ministryName
+                .map(MemberDTO::new)
                 .collect(Collectors.toList());
+    }
+
+    public List<MemberDTO> getActiveMembers() {
+        return memberRepository.findAll()
+                .stream()
+                .filter(m -> !m.isArchived())
+                .map(MemberDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    public Member getMemberById(int id) {
+        return memberRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
     }
 
     @Transactional
     public MemberDTO saveMember(MemberDTO dto) {
         Member member = new Member();
         mapDtoToEntity(dto, member);
-        Member saved = memberRepository.save(member);
-        return new MemberDTO(saved);
+        return new MemberDTO(memberRepository.save(member));
     }
 
     @Transactional
     public MemberDTO updateMember(int id, MemberDTO dto) {
-        Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+        Member member = getMemberById(id);
         mapDtoToEntity(dto, member);
-        Member updated = memberRepository.save(member);
-        return new MemberDTO(updated);
+        return new MemberDTO(memberRepository.save(member));
+    }
+
+    @Transactional
+    public void deleteMember(int id) {
+        memberRepository.deleteById(id);
+    }
+
+    @Transactional
+    public MemberDTO archiveMember(int id) {
+        Member member = getMemberById(id);
+        member.setArchived(true);
+        return new MemberDTO(memberRepository.save(member));
+    }
+
+    @Transactional
+    public MemberDTO recoverMember(int id) {
+        Member member = getMemberById(id);
+        member.setArchived(false);
+        return new MemberDTO(memberRepository.save(member));
     }
 
     private void mapDtoToEntity(MemberDTO dto, Member member) {
+
         member.setFirstName(dto.getFirstName());
         member.setMiddleName(dto.getMiddleName());
         member.setLastName(dto.getLastName());
 
-        // Parse String to LocalDate
-        if (dto.getDob() != null && !dto.getDob().isEmpty()) {
-            member.setDob(LocalDate.parse(dto.getDob()));
-        } else {
-            member.setDob(null);
-        }
+        member.setDob(dto.getDob() != null && !dto.getDob().isEmpty()
+                ? LocalDate.parse(dto.getDob())
+                : null);
 
         member.setGender(dto.getGender());
         member.setAddress(dto.getAddress());
 
-        // Map ministryId to Ministry entity
-        if (dto.getMinistryId() != null) {
-            Ministry ministry = ministryRepository.findById(dto.getMinistryId())
-                    .orElseThrow(() -> new RuntimeException("Ministry not found"));
-            member.setMinistry(ministry);
-        } else {
-            member.setMinistry(null);
-        }
-    }
+        member.setStatus(MemberStatus.valueOf(dto.getStatus().toUpperCase()));
+        member.setRole(MemberRole.valueOf(dto.getRole().toUpperCase()));
 
-    public void deleteMember(int id) {
-        memberRepository.deleteById(id);
+        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                .orElseThrow(() -> new RuntimeException("Ministry not found"));
+        member.setMinistry(ministry);
     }
 }
