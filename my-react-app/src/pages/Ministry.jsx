@@ -41,7 +41,11 @@ export default function Ministry() {
 
   // Filter by search term
   const filteredMembers = membersOfSelected.filter(m =>
+<<<<<<< HEAD
     `${m.firstName} ${m.middleName || ""} ${m.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+=======
+    `${m.firstName} ${m.middleName} ${m.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
   );
 
   // Color palette for ministry cards
@@ -249,17 +253,41 @@ export default function Ministry() {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gradient-to-r from-green-50 to-emerald-50">
+<<<<<<< HEAD
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">Name</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">DOB</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">Gender</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">Address</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">Role</th>
+=======
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">
+                        Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">
+                        Date of Birth
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">
+                        Gender
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 border-b border-gray-200">
+                        Address
+                      </th>
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
                     </tr>
                   </thead>
                   <tbody>
                     {filteredMembers.map((member, index) => (
+<<<<<<< HEAD
                       <tr key={member.memberId} className={`transition-colors hover:bg-green-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
                         {/* Name */}
+=======
+                      <tr
+                        key={member.memberId}
+                        className={`transition-colors hover:bg-green-50 ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        }`}
+                      >
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
                         <td className="px-6 py-4 border-b border-gray-200">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold text-sm">
@@ -267,11 +295,16 @@ export default function Ministry() {
                             </div>
                             <div>
                               <div className="font-semibold text-gray-800">
+<<<<<<< HEAD
                                 {member.firstName} {member.middleName || ""} {member.lastName}
+=======
+                                {member.firstName} {member.middleName} {member.lastName}
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
                               </div>
                             </div>
                           </div>
                         </td>
+<<<<<<< HEAD
 
                         {/* DOB */}
                         <td className="px-6 py-4 text-gray-700 border-b border-gray-200">
@@ -283,10 +316,27 @@ export default function Ministry() {
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                             member.gender === 'Male' ? 'bg-blue-100 text-blue-700' :
                             member.gender === 'Female' ? 'bg-pink-100 text-pink-700' : 'bg-gray-100 text-gray-700'
+=======
+                        <td className="px-6 py-4 text-gray-700 border-b border-gray-200">
+                          {member.dob ? new Date(member.dob).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          }) : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 border-b border-gray-200">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            member.gender === 'Male' 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : member.gender === 'Female'
+                              ? 'bg-pink-100 text-pink-700'
+                              : 'bg-gray-100 text-gray-700'
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
                           }`}>
                             {member.gender || 'N/A'}
                           </span>
                         </td>
+<<<<<<< HEAD
 
                         {/* Address */}
                         <td className="px-6 py-4 text-gray-700 border-b border-gray-200">
@@ -304,6 +354,11 @@ export default function Ministry() {
                           </span>
                         </td>
 
+=======
+                        <td className="px-6 py-4 text-gray-700 border-b border-gray-200">
+                          {member.address || 'N/A'}
+                        </td>
+>>>>>>> 92df3200c4fd31480fe9a3b77da7a3ff466d2270
                       </tr>
                     ))}
                   </tbody>
