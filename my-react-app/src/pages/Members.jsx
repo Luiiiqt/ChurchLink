@@ -12,7 +12,8 @@ export default function Members() {
 
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
-  const [statusFilter, setStatusFilter] = useState(""); // New status filter
+  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState(""); // new role filter
 
   const [editing, setEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -20,7 +21,7 @@ export default function Members() {
   const [currentPage, setCurrentPage] = useState(1);
   const membersPerPage = 10;
 
-  const roleOptions = ["LEADER", "MEMBER", "COORDINATOR"]; // Role dropdown options
+  const roleOptions = ["LEADER", "MEMBER", "ASSISTANT"];
 
   const [form, setForm] = useState({
     memberId: null,
@@ -167,6 +168,7 @@ export default function Members() {
   const displayedMembers = members
     .filter(m => showArchived ? m.archived : !m.archived)
     .filter(m => (statusFilter ? m.status === statusFilter : true))
+    .filter(m => (roleFilter ? m.role === roleFilter : true)) // new role filter
     .filter(m => {
       const text = search.toLowerCase();
       const ministryName = ministries.find(x => x.ministryId === m.ministryId)?.ministryName || "";
@@ -184,7 +186,7 @@ export default function Members() {
   const totalPages = Math.ceil(displayedMembers.length / membersPerPage);
   const currentMembers = displayedMembers.slice((currentPage - 1) * membersPerPage, currentPage * membersPerPage);
 
-  useEffect(() => setCurrentPage(1), [showArchived, search, statusFilter]);
+  useEffect(() => setCurrentPage(1), [showArchived, search, statusFilter, roleFilter]); // include roleFilter
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -205,7 +207,7 @@ export default function Members() {
         </div>
 
         {/* Filters */}
-        <div className="mb-4 flex gap-4">
+        <div className="mb-4 flex gap-4 flex-wrap">
           <input
             type="text"
             placeholder="Search..."
@@ -218,6 +220,10 @@ export default function Members() {
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
             <option value="DECEASED">Deceased</option>
+          </select>
+          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="p-2 border rounded-lg">
+            <option value="">All Roles</option>
+            {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
 

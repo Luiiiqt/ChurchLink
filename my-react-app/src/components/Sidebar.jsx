@@ -10,6 +10,7 @@ function Sidebar({ status, currentPage, setCurrentPage, isOpen }) {
     { icon: "📋", text: "Attendance", page: "attendance", path: "/attendance" },
     { icon: "📂", text: "Ministries", page: "ministries", path: "/ministries" },
     { icon: "🎯", text: "Activities", page: "activities", path: "/activities" },
+    { icon: "📊", text: "Reports", page: "reports", path: "/reports" }, // <-- added
   ];
 
   return (

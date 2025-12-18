@@ -14,6 +14,7 @@ import Ministry from "./pages/Ministry";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import Reports from "./pages/Reports"; // <-- import Reports page
 
 function AppInner() {
   const { token, logout } = useAuth();
@@ -50,7 +51,7 @@ function AppInner() {
             <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
             <Route path="/activities" element={<ProtectedRoute><Activities /></ProtectedRoute>} />
             <Route path="/ministries" element={<ProtectedRoute><Ministry /></ProtectedRoute>} />
-
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
