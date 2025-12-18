@@ -5,6 +5,7 @@ import com.lui.churchlink.model.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -24,6 +25,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Integer>
 
     // Check if a member already attended a specific activity
     boolean existsByMember_MemberIdAndActivity_ActivityId(Integer memberId, Integer activityId);
+
+    List<Attendance> findByDateBetween(LocalDate start, LocalDate end);
 
     // --- Attendance reporting DTO ---
     @Query("""
