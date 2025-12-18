@@ -32,45 +32,26 @@ public class ActivityService {
 
     public ActivityDTO saveActivity(ActivityDTO dto) {
         Activity activity = new Activity();
-        applyCommonFields(activity, dto);
+        applyDtoToActivity(activity, dto);
         return new ActivityDTO(activityRepository.save(activity));
     }
 
     public ActivityDTO updateActivity(ActivityDTO dto) {
         Activity activity = activityRepository.findById(dto.getActivityId())
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
-        applyCommonFields(activity, dto);
+        applyDtoToActivity(activity, dto);
         return new ActivityDTO(activityRepository.save(activity));
-    }
-
-    private void applyCommonFields(Activity activity, ActivityDTO dto) {
-        if (dto.getDate() != null && !dto.getDate().isBlank())
-            activity.setDate(LocalDate.parse(dto.getDate()));
-        if (dto.getTime() != null && !dto.getTime().isBlank())
-            activity.setTime(LocalTime.parse(dto.getTime()));
-
-        activity.setPlace(dto.getPlace());
-        activity.setActivity(dto.getActivity() != null && !dto.getActivity().isBlank() ? dto.getActivity() : "Unnamed Activity");
-
-        if (dto.getMinistryId() == null)
-            throw new RuntimeException("Ministry is required for activities");
-
-        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
-                .orElseThrow(() -> new RuntimeException("Ministry not found"));
-        activity.setMinistry(ministry);
-
-        // Remove general/eventType handling
-        activity.setEventType(null);
     }
 
     public ActivityDTO rescheduleActivity(Integer id, ActivityDTO dto) {
         Activity activity = activityRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
-        if (dto.getDate() != null && !dto.getDate().isBlank())
-            activity.setDate(LocalDate.parse(dto.getDate()));
-        if (dto.getTime() != null && !dto.getTime().isBlank())
-            activity.setTime(LocalTime.parse(dto.getTime()));
+
+        // Only update date & time
+        activity.setDate(LocalDate.parse(dto.getDate()));
+        activity.setTime(LocalTime.parse(dto.getTime()));
         activity.setStatus(Activity.ActivityStatus.RESCHEDULED);
+
         return new ActivityDTO(activityRepository.save(activity));
     }
 
@@ -78,13 +59,32 @@ public class ActivityService {
         activityRepository.deleteById(id);
     }
 
-    // -------------------------
-    // New: Mark activity as completed
-    // -------------------------
     public void markCompleted(Integer activityId) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
-        activity.setCompleted(true); // also sets status to COMPLETED
+        activity.setCompleted(true);
+        activity.setStatus(Activity.ActivityStatus.COMPLETED);
         activityRepository.save(activity);
+    }
+
+    // -------------------------
+    // Helper method to map DTO to entity
+    // -------------------------
+    private void applyDtoToActivity(Activity activity, ActivityDTO dto) {
+        activity.setActivity(dto.getActivity());
+        activity.setPlace(dto.getPlace());
+        activity.setDate(LocalDate.parse(dto.getDate()));
+        activity.setTime(LocalTime.parse(dto.getTime()));
+
+        Ministry ministry = ministryRepository.findById(dto.getMinistryId())
+                .orElseThrow(() -> new RuntimeException("Ministry not found"));
+        activity.setMinistry(ministry);
+
+        // Optional: reset status if not provided
+        if (dto.getStatus() != null) {
+            activity.setStatus(Activity.ActivityStatus.valueOf(dto.getStatus()));
+        } else if (activity.getStatus() == null) {
+            activity.setStatus(Activity.ActivityStatus.SCHEDULED);
+        }
     }
 }

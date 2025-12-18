@@ -3,6 +3,8 @@ package com.lui.churchlink.controller.api;
 import com.lui.churchlink.dto.ActivityDTO;
 import com.lui.churchlink.service.ActivityService;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
