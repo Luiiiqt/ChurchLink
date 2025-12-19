@@ -67,7 +67,16 @@ const Register = () => {
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
           {/* Left Registration Form */}
           <div className="w-full lg:w-5/12 bg-white rounded-3xl shadow-2xl p-8 lg:p-10 animate-slideUp hover:shadow-3xl transition-shadow duration-500">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-8 animate-fadeInScale">
+            {/* Logo in Form */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/logo.png" 
+                alt="ChurchLink Logo" 
+                className="w-20 h-20 rounded-full shadow-lg animate-fadeInScale"
+              />
+            </div>
+            
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-8 text-center animate-fadeInScale">
               Create Account
             </h2>
 
@@ -133,9 +142,16 @@ const Register = () => {
 
           {/* Right Info */}
           <div className="w-full lg:w-1/2 animate-slideRight">
-            <h1 className="text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 animate-gradientText">
-              ChurchLink
-            </h1>
+            <div className="flex items-center gap-4 mb-6">
+              <img 
+                src="/logo.png" 
+                alt="ChurchLink Logo" 
+                className="w-16 h-16 lg:w-20 lg:h-20 rounded-full shadow-xl animate-float"
+              />
+              <h1 className="text-5xl lg:text-6xl font-extrabold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent animate-gradientText">
+                ChurchLink
+              </h1>
+            </div>
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6 animate-slideInLeft">
               Join Our Community!
             </h2>
@@ -157,6 +173,7 @@ const Register = () => {
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes gradientText { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
         @keyframes particle1 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.3;}50%{transform:translate(20px,-20px) scale(1.2);opacity:0.6;} }
         @keyframes particle2 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.4;}50%{transform:translate(-30px,30px) scale(1.3);opacity:0.7;} }
         @keyframes particle3 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.3;}50%{transform:translate(25px,25px) scale(1.1);opacity:0.5;} }
@@ -172,6 +189,7 @@ const Register = () => {
         .animate-fadeInScale { animation: fadeInScale 0.8s ease-out; }
         .animate-slideInLeft { animation: slideInLeft 0.8s ease-out both; }
         .animate-gradientText { background-size: 200% 200%; animation: gradientText 3s ease infinite; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
         .animate-particle1 { animation: particle1 6s ease-in-out infinite; }
         .animate-particle2 { animation: particle2 8s ease-in-out infinite; }
         .animate-particle3 { animation: particle3 7s ease-in-out infinite; }
